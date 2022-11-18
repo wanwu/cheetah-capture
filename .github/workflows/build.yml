@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   build-job:
     name: build-job
-    runs-on: macos-12
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [16.x]

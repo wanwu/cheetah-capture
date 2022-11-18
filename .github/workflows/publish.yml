@@ -6,7 +6,7 @@ on:
 
 jobs:
   publish:
-    runs-on: macos-12
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
