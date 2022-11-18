@@ -17,7 +17,7 @@ echo "=================="
 mkdir -p $WEB_CAPTURE_PATH/lib/ffmpeg-emcc
 
 cd $FFMPEG_PATH
-
+./configure --disable-x86asm
 make clean
 
 CONFIG_ARGS=(
