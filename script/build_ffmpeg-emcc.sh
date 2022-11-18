@@ -21,6 +21,7 @@ cd $FFMPEG_PATH
 make clean
 
 apt install clang
+apt install llvm-nm
 
 CONFIG_ARGS=(
   --prefix=$WEB_CAPTURE_PATH/lib/ffmpeg-emcc \
