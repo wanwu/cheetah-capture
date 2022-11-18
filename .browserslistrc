@@ -1,0 +1,7 @@
+[production]
+defaults
+Chrome >= 49
+[development]
+defaults
+last 2 versions
+not ie 11

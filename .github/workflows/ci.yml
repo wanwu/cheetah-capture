@@ -6,6 +6,7 @@ on:
 
 jobs:
   build-job:
+    name: build-job
     runs-on: ubuntu-latest
     strategy:
       matrix:
