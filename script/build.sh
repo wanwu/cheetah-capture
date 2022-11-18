@@ -17,9 +17,9 @@ ls
 echo "=========="
 
 
-sh ./script/build_ffmpeg-emcc.sh
+bash ./script/build_ffmpeg-emcc.sh
 
-sh ./script/build_wasm.sh
+bash ./script/build_wasm.sh
 
 npm run gents
 # 贴tmp目录 构造结构

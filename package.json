@@ -15,7 +15,7 @@
     "gents": "npx tsc --declaration -p tsconfig.json --declarationDir ./types",
     "prettier": "prettier --write ./src/**.js",
     "eslint": "eslint --fix ./src/",
-    "build": "./script/build.sh",
+    "build": "bash ./script/build.sh",
     "commit": "git cz",
     "release": "standard-version --skip.commit && git commit --amend"
   },
