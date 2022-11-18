@@ -15,7 +15,7 @@ jobs:
         uses: actions/download-artifact@v3
         needs: build-job
         with:
-          name: output.tar.gz
+          name: output-tar
 
       - uses: actions/checkout@v2
       # Setup .npmrc file to publish to GitHub Packages
