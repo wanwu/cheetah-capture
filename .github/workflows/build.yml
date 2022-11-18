@@ -1,0 +1,36 @@
+name: build
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-job:
+    name: build-job
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      - name: Install packages
+        run: npm install --registry https://registry.npmjs.org/
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          version: 1.38.40 # emcc 版本
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: build wasm
+        run: sh script/build.sh
+
+      - name: Upload output file
+        uses: actions/upload-artifact@v3
+
+        with:
+          name: output
+          path: output.tar.gz
