@@ -20,6 +20,8 @@ cd $FFMPEG_PATH
 ./configure --disable-x86asm
 make clean
 
+apt install clang
+
 CONFIG_ARGS=(
   --prefix=$WEB_CAPTURE_PATH/lib/ffmpeg-emcc \
   --target-os=none        # use none to prevent any os specific configurations
