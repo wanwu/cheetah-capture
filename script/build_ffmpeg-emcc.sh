@@ -28,6 +28,7 @@ CONFIG_ARGS=(
   --arch=x86_32           # use x86_32 to achieve minimal architectural optimization
   --enable-cross-compile  # enable cross compile
   --disable-x86asm        # disable x86 asm
+  --disable-asm        # disable x86 asm
   --disable-inline-asm    # disable inline asm
   --disable-stripping     # disable stripping
   --disable-programs      # disable programs build (incl. ffplay, ffprobe & ffmpeg)

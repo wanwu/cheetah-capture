@@ -26,7 +26,7 @@ npm run gents
 mkdir -p output/tmp
 mkdir -p output/types
 cp -r tmp/*  output/tmp
-cp -r types/*  output/tmp
+cp -r types/*  output/types
 cp -r package.json  output/
 cp -r README.md  output/
 # 压缩tar
