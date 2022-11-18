@@ -12,6 +12,7 @@ cd llvm
 ./configure --enable-optimized CC=gcc CXX=g++
 make -j2
 
+ls /usr/bin
 llvm -v
 llvm-nm -v
 
