@@ -22,15 +22,9 @@
   "author": "mengxiaoxuan <mengxiaoxuan@baidu.com>",
   "homepage": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/jordiwang/web-capture/issues"
-  },
-  "publishConfig": {
-    "registry": "http://registry.npm.baidu-int.com/"
-  },
   "repository": {
     "type": "git",
-    "url": "ssh://mengxiaoxuan@icode.baidu.com:8235/baidu/aigc/video-frame-extraction"
+    "url": "git@github.com:wanwu/cheetah-capture.git"
   },
   "devDependencies": {
     "@babel/core": "7.13.15",
