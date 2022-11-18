@@ -11,7 +11,8 @@ mv llvm-3.6.0.src llvm
 cd llvm
 ./configure --enable-optimized CC=gcc CXX=g++
 make -j2
-
+make install
+cd ../
 ls /usr/bin
 llvm -v
 llvm-nm -v
