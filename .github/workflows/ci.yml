@@ -1,0 +1,48 @@
+name: build
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-job:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+      - uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install packages
+        run: npm install
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          version: 1.38.40 # emcc 版本
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: build wasm
+        run: sh script/build.sh
+
+      - name: Upload output file
+        uses: actions/upload-artifact@v3
+
+        with:
+          name: output
+          path: output.tar.gz
+
