@@ -17,7 +17,7 @@ ls /usr/bin
 llvm -v
 llvm-nm -v
 llvm-nm-12 -v
-
+mv /usr/bin/llvm-nm-12 /usr/bin/llvm-nm
 cd $WEB_CAPTURE_PATH
 
 # 检测是否有缓存 编译好的lib 如果没有拉ffmpeg库进行编译
