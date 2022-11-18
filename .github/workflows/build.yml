@@ -24,7 +24,7 @@ jobs:
           actions-cache-folder: 'emsdk-cache'
 
       - name: build wasm
-        run: sh script/build.sh
+        run: bash script/build.sh
 
       - name: Upload output file
         uses: actions/upload-artifact@v3
