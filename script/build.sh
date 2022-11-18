@@ -17,7 +17,7 @@ ls
 echo "=========="
 
 
-bash ./script/build_ffmpeg-emcc.sh
+# bash ./script/build_ffmpeg-emcc.sh
 
 bash ./script/build_wasm.sh
 
