@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install packages
-        run: npm install --registry https://registry.npmjs.org/
+        run: npm install
 
       - name: Setup emsdk
         uses: mymindstorm/setup-emsdk@v11
