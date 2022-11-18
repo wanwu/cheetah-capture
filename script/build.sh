@@ -9,7 +9,7 @@ WEB_CAPTURE_PATH=$(cd $NOW_PATH/../; pwd)
 cd $WEB_CAPTURE_PATH
 
 # 检测是否有缓存 编译好的lib 如果没有拉ffmpeg库进行编译
-wget - P ./script http://ffmpeg.org/releases/ffmpeg-3.4.8.tar.xz
+wget -P ./script http://ffmpeg.org/releases/ffmpeg-3.4.8.tar.xz
 echo "=========="
 ls
 echo "=========="
