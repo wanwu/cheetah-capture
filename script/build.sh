@@ -13,6 +13,7 @@ cd llvm
 make -j2
 
 llvm -v
+llvm-nm -v
 
 cd $WEB_CAPTURE_PATH
 
