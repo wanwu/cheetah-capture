@@ -1,10 +1,4 @@
 #!/bin/bash
-###
- # @file: 
- # @Author: jiangzichen01@baidu.com
- # @LastEditors: jiangzichen01@baidu.com
- # @Date: 2022-02-24 15:53:59
-### 
 
 echo "===== start build ffmpeg ====="
 

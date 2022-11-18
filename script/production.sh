@@ -1,10 +1,4 @@
 set -e
-###
- # @file: 
- # @Author: jiangzichen01@baidu.com
- # @LastEditors: jiangzichen01@baidu.com
- # @Date: 2022-09-14 18:30:43
-### 
 export PATH=$NODEJS_16_10_0_BIN:$PATH
 
 echo "node: $(node -v)"

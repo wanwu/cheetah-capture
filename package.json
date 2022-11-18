@@ -19,7 +19,7 @@
     "commit": "git cz",
     "release": "standard-version --skip.commit && git commit --amend"
   },
-  "author": "mengxiaoxuan <mengxiaoxuan@baidu.com>",
+  "author": "hixuanxuan",
   "homepage": "",
   "license": "ISC",
   "repository": {
