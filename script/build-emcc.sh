@@ -1,10 +1,4 @@
 #!/bin/bash -x
-###
- # @file: 
- # @Author: jiangzichen01@baidu.com
- # @LastEditors: jiangzichen01@baidu.com
- # @Date: 2022-11-07 16:39:36
-###
 
 # verify Emscripten version
 
