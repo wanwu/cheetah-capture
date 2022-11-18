@@ -10,7 +10,7 @@ FFMPEG_PATH=$(cd $WEB_CAPTURE_PATH/lib/ffmpeg-emcc; pwd)
 
 TOTAL_MEMORY=33554432
 
-# source $WEB_CAPTURE_PATH/../emsdk/emsdk_env.sh
+source $WEB_CAPTURE_PATH/emsdk/emsdk_env.sh
 # rm -rf ./demo/capture.wasm
     # --pre-js $WEB_CAPTURE_PATH/src/worker.js \
 

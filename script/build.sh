@@ -15,8 +15,17 @@ cd $WEB_CAPTURE_PATH
 echo "=========="
 ls
 echo "=========="
+git clone https://github.com/emscripten-core/emsdk.git
 
-
+cd emsdk
+  git pull
+  # Download and install the latest SDK tools.
+  ./emsdk install latest
+  # Make the "latest" SDK "active" for the current user. (writes .emscripten file)
+  ./emsdk activate latest
+   # Activate PATH and other environment variables in the current terminal
+   source ./emsdk_env.sh
+cd ../
 # bash ./script/build_ffmpeg-emcc.sh
 
 bash ./script/build_wasm.sh
