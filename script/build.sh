@@ -17,6 +17,7 @@ cd $WEB_CAPTURE_PATH
 # ls
 # echo "=========="
 clang -v
+whereis clang
 
 # bash ./script/build_ffmpeg-emcc.sh
 
