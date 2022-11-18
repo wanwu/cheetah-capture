@@ -5,6 +5,14 @@ echo "===== start build ====="
 NOW_PATH=$(cd $(dirname $0); pwd)
 
 WEB_CAPTURE_PATH=$(cd $NOW_PATH/../; pwd)
+wget http://llvm.org/releases/3.6.0/llvm-3.6.0.src.tar.xz
+tar xf llvm-3.6.0.src.tar.xz
+mv llvm-3.6.0.src llvm
+cd llvm
+./configure --enable-optimized CC=gcc CXX=g++
+make -j2
+
+llvm -v
 
 cd $WEB_CAPTURE_PATH
 
