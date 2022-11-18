@@ -1,5 +1,6 @@
 #!/bin/bash
-apt-get install llvm-nm
+apt update
+apt install llvm-nm
 
 llvm-nm -v
 # echo "===== start build ====="
