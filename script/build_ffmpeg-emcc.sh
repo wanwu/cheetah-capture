@@ -14,7 +14,7 @@ echo "=================="
 
 # rm -rf  $WEB_CAPTURE_PATH/lib/ffmpeg-emcc
 
-mkdir $WEB_CAPTURE_PATH/lib/ffmpeg-emcc
+mkdir -p $WEB_CAPTURE_PATH/lib/ffmpeg-emcc
 
 cd $FFMPEG_PATH
 
