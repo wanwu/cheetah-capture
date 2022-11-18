@@ -16,7 +16,7 @@ TOTAL_MEMORY=33554432
 
 npm run webpack-capture
 # -lswresample -lm -lz
-emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH/lib/libswresample.a $FFMPEG_PATH/lib/libavcodec.a $FFMPEG_PATH/lib/libswscale.a $FFMPEG_PATH/lib/libavutil.a \
+emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH/lib/libavcodec.a $FFMPEG_PATH/lib/libswscale.a $FFMPEG_PATH/lib/libavutil.a \
     -O0 \
     -lworkerfs.js \
     --pre-js $WEB_CAPTURE_PATH/tmp/capture.worker.js \
