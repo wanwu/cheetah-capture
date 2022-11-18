@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   build-job:
     name: build-job
-    runs-on: ubuntu-latest
+    runs-on: macos-12
     strategy:
       matrix:
         node-version: [16.x]
@@ -17,11 +17,11 @@ jobs:
       - name: Install packages
         run: npm install
 
-      - name: Setup emsdk
-        uses: mymindstorm/setup-emsdk@v11
-        with:
-          version: 1.38.40 # emcc 版本
-          actions-cache-folder: 'emsdk-cache'
+      # - name: Setup emsdk
+      #   uses: mymindstorm/setup-emsdk@v11
+      #   with:
+      #     version: 1.38.40 # emcc 版本
+      #     actions-cache-folder: 'emsdk-cache'
 
       - name: build wasm
         run: bash script/build.sh
