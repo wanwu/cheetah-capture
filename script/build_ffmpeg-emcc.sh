@@ -20,8 +20,9 @@ cd $FFMPEG_PATH
 ./configure --disable-x86asm
 make clean
 
-apt install clang
-apt install llvm-nm
+# apt install clang
+# apt install llvm-nm
+
 
 CONFIG_ARGS=(
   --prefix=$WEB_CAPTURE_PATH/lib/ffmpeg-emcc \
@@ -37,7 +38,7 @@ CONFIG_ARGS=(
   --extra-cflags="$CFLAGS"
   --extra-cxxflags="$CFLAGS"
   --extra-ldflags="$LDFLAGS"
-  --nm="llvm-nm"
+  # --nm="llvm-nm"
   --ar=emar
   --ranlib=emranlib
   --cc=emcc
