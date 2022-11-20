@@ -12,9 +12,6 @@ cd $WEB_CAPTURE_PATH
 # wget http://ffmpeg.org/releases/ffmpeg-3.4.8.tar.xz
 # tar -xvf ./ffmpeg-3.4.8.tar.xz -C ./script
 
-echo "=========="
-ls
-echo "=========="
 git clone https://github.com/emscripten-core/emsdk.git
 
 cd emsdk
@@ -43,6 +40,9 @@ tar zcvf output.tar.gz ./output
 
 # rm -rf ./dist/
 # rm -rf ./tmp/
+echo "=========="
+ls
+echo "=========="
 
 echo "===== start build js ====="
 
