@@ -25,6 +25,6 @@ jobs:
           node-version: '16.x'
           registry-url: 'https://registry.npmjs.org'
       # # - run: npm install
-      - run: ls && tar -xvf output.tar.gz
+      - run: ls && tar -xvf output.tar.gz && cd output && npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
