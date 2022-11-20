@@ -28,6 +28,9 @@ cd ../
 bash ./script/build_wasm.sh
 
 npm run gents
+# 替换log内容
+node script/replaceLog.js
+
 # 贴dist目录 构造结构
 mkdir -p output/dist
 mkdir -p output/types
