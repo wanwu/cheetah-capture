@@ -26,6 +26,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       # - run: npm install
 
-      - run: cd output && npm publish --access public
+      - run: ls && unzip output.zip && cd output && npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
