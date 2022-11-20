@@ -1,5 +1,4 @@
 import {Events} from './consts';
-// import CaptureWorker from 'worker-loader!./capture.worker.ts';
 let captureWorker: null | Worker = null;
 function workerPost(info: {type: string, [key: string]: unknown}) {
     captureWorker && captureWorker.postMessage({
@@ -10,8 +9,6 @@ async function initWorker(url: URL|string, wasmPath: URL|string): Promise<Worker
     if (captureWorker) {
         return captureWorker;
     }
-    // captureWorker = new CaptureWorker();
-    // @ts-ignore
     // captureWorker = new Worker(new URL('./capture.worker.js', import.meta.url));
     captureWorker = new Worker(url);
     workerPost({
@@ -42,6 +39,9 @@ interface CallbackType {
     onSuccess?: (prev: PrevType) => void;
     onError?: (errmeg: string) => void;
 }
+interface MapInfoType extends CallbackType{
+    url: string[];
+}
 interface CaptureInfo extends CallbackType{
     info: number[] | number;
     path?: string;
@@ -50,12 +50,15 @@ interface CaptureInfo extends CallbackType{
 }
 function createRequest() {
     let currentId = 0;
-    const map: Map<number, CallbackType> = new Map();
+    const map: Map<number, MapInfoType> = new Map();
     return {
         // 获取视频唯一id
-        setFrameCallback(callback: CallbackType) {
+        setFrameCallback(item: CallbackType) {
             const id = ++currentId;
-            map.set(currentId, callback);
+            map.set(currentId, {
+                ...item,
+                url: [],
+            });
             return id;
         },
         // 设置
@@ -72,7 +75,6 @@ async function getUrl(width: number, height: number, imageDataBuffer):
 Promise<{url: string, blob?: Blob}> {
     canvas.width = width;
     canvas.height = height;
-    // console.log('===>iiiiiiiiiiiiiiiiiiiiiiiii', imageDataBuffer, width, height);
     const imageData = new ImageData(imageDataBuffer, width, height);
     ctx.putImageData(imageData, 0, 0, 0, 0, width, height);
     // const blob = new Blob([imageDataBuffer.buffer], {type: 'image/png'} /* (1) */);
@@ -112,32 +114,8 @@ export async function initCapture({
     workerPath: URL | string;
     wasmPath: URL | string;
 }) {
-    const prev = {
-        url: [],
-        blob: [],
-    };
     const worker = await initWorker(workerPath, wasmPath);
-    console.log('success init', worker);
-    // window.onmessage =
     worker.addEventListener('message', async e => {
-        // if (e?.data?.type === 'receiveImageOnchange') {
-        //     // TODO:是否要做能力检测 支持离屏canvas的用离屏生成url
-        //     const {imageDataBuffer, width, height, duration, id} = e.data || {};
-        //     const img = await getUrl(width, height, imageDataBuffer);
-        //     const cbk = pool.getCbk(id);
-        //     console.log('receiveImageOnchange', id);
-        //     const {onChange} = cbk;
-        //     const info = {width, height, duration: duration / 1000000};
-        //     onChange && onChange(prev, img, info);
-        //     prev.url.push(img.url);
-        //     prev.blob.push(img.blob);
-        // }
-        // if (e?.data?.type === 'receiveImageOnSuccess') {
-        //     const {id} = e.data || {};
-        //     const cbk = pool.getCbk(id);
-        //     const {onSuccess} = cbk;
-        //     onSuccess && onSuccess(prev);
-        // }
         switch (e?.data?.type) {
             case Events.receiveImageOnchange: {
                 const {imageDataBuffer, width, height, duration, id} = e.data || {};
@@ -145,16 +123,17 @@ export async function initCapture({
                 const cbk = pool.getCbk(id);
                 const {onChange} = cbk;
                 const info = {width, height, duration: duration / 1000000};
-                onChange && onChange(prev, img, info);
-                prev.url.push(img.url);
-                prev.blob.push(img.blob);
+                const {url} = pool.getCbk(id);
+                onChange && onChange({url}, img, info);
+                url.push(img.url);
                 break;
             }
             case Events.receiveImageOnSuccess: {
                 const {id} = e.data || {};
                 const cbk = pool.getCbk(id);
                 const {onSuccess} = cbk;
-                onSuccess && onSuccess(prev);
+                const {url} = pool.getCbk(id);
+                onSuccess && onSuccess({url});
                 break;
             }
             case Events.receiveError: {

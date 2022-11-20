@@ -6,8 +6,8 @@ export default {
     input: ['src/index.ts', 'src/capture.worker.ts'], // 源文件入口
     output: [
         {
-            // file: 'tmp/index.js', // package.json 中 "module": "dist/index.esm.js"
-            dir: 'tmp',
+            // file: 'dist/index.js', // package.json 中 "module": "dist/index.esm.js"
+            dir: 'dist',
             format: 'es', // es module 形式的包， 用来import 导入， 可以tree shaking
             sourcemap: false,
         },

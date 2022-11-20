@@ -28,34 +28,22 @@ cd ../
 bash ./script/build_wasm.sh
 
 npm run gents
-# 贴tmp目录 构造结构
-mkdir -p output/tmp
+# 贴dist目录 构造结构
+mkdir -p output/dist
 mkdir -p output/types
-cp -r tmp/*  output/tmp
+cp -r dist/*  output/dist
 cp -r types/*  output/types
 cp -r package.json  output/
 cp -r README.md  output/
 # 压缩tar
 tar zcvf output.tar.gz ./output
 
-# rm -rf ./dist/
-# rm -rf ./tmp/
 echo "=========="
 ls
 echo "=========="
 
 echo "===== start build js ====="
 
-# echo "wasm path is: $WASM_PATH"
-
-# export WASM_PATH
-
-# npm run webpack-worker
-
 echo "===== finish build js ====="
-
-# $WEB_CAPTURE_PATH/script/build_wasm.sh
-
-# rm -rf ./tmp/
 
 echo "===== finish build ====="
