@@ -13,7 +13,6 @@ jobs:
     steps:
       - name: Download a single artifact
         uses: actions/download-artifact@v3
-        needs: build-job
         with:
           name: output-tar
 
