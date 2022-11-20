@@ -1,7 +1,7 @@
 {
   "name": "cheetah-capture",
   "version": "0.1.1",
-  "description": "wasm 截取视频帧",
+  "description": "基于ffmpeg的wasm截取视频帧",
   "main": "dist/index.js",
   "types": "types/index.d.ts",
   "files": [
