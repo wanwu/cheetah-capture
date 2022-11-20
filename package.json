@@ -1,6 +1,6 @@
 {
   "name": "cheetah-capture",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "wasm 截取视频帧",
   "main": "tmp/index.js",
   "types": "types/index.d.ts",
