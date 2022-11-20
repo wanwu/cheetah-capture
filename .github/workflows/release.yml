@@ -14,7 +14,7 @@ jobs:
         id: download-artifact
         uses: dawidd6/action-download-artifact@v2
         with:
-          name: artifact-upload-test
+          name: output
           search_artifacts: true
           workflow: build.yml
 
