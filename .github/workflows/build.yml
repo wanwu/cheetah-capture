@@ -31,4 +31,4 @@ jobs:
 
         with:
           name: output
-          path: output/
+          path: output.tar.gz
