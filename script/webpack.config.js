@@ -46,7 +46,7 @@ module.exports = [{
         //     return pathData.chunk.name === 'main' ? 'index.js' : '[name].[contenthash:6].js';
         // },
         filename: 'index.js',
-        path: path.resolve(__dirname, '../tmp'),
+        path: path.resolve(__dirname, '../dist'),
         library: 'cheetahCapture',
         libraryTarget: 'umd',
         publicPath: '/',
@@ -66,7 +66,7 @@ module.exports = [{
         //     return pathData.chunk.name === 'main' ? 'index.js' : '[name].[contenthash:6].js';
         // },
         filename: 'capture.worker.js',
-        path: path.resolve(__dirname, '../tmp'),
+        path: path.resolve(__dirname, '../dist'),
         // library: 'wasm-capture',
         // libraryTarget: 'umd',
         publicPath: '/',

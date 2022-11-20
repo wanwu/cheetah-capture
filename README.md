@@ -45,7 +45,7 @@
    source ./emsdk_env.sh
 ```
 
-* `emsdk` 安装目录需要与 `代码库` 同级
+* `emsdk` 安装于代码库根目录
 
 ## 编译脚本
 
@@ -82,8 +82,8 @@ demo文件夹下`index.html` 使用`live server`启动即可，`live-server --po
 接受参数如下
 |  参数   | 类型  | 含义  | 是否必须  |
 |  ----  | ----  |----  |----  |
-| workerPath  | URL / string | woker路径，node_modules/tmp/capture.worker.js  | y  |
-| wasmPath  | URL / string | wasm路径，node_modules/tmp/capture.worker.wasm | y |
+| workerPath  | URL / string | woker路径，node_modules/dist/capture.worker.js  | y  |
+| wasmPath  | URL / string | wasm路径，node_modules/dist/capture.worker.wasm | y |
 
 `capture`: `(args) => void` 在worker里执行截帧方法
 接受参数如下

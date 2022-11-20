@@ -141,10 +141,11 @@ class ImageCapture {
                 }
                 this.cCaptureByCount(info, `${path}/${name}`, id);
                 this.free();
+                FS.unmount(path);
                 // 完善信息 这里需要一种模式 是否只一次性postmsg 不一张张读取
             }
         } catch (e) {
-            // console.log('发生了错误', e);
+            console.log('发生了错误', e);
             // 如果发生错误 通知
             self.postMessage({
                 type: 'receiveError',

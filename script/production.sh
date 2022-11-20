@@ -6,11 +6,11 @@ echo "npm: v$(npm -v)"
 
 echo "now compiling $1"
 
-mkdir -p output/tmp
+mkdir -p output/dist
 mkdir -p output/types
-# 贴tmp目录 构造结构
-cp -r tmp/*  output/tmp
-cp -r types/*  output/tmp
+# 贴dist目录 构造结构
+cp -r dist/*  output/dist
+cp -r types/*  output/dist
 cp -r package.json  output/
 cp -r README.md  output/
 
