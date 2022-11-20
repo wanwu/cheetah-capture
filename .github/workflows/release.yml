@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Download Artifact
         id: download-artifact
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v2
         with:
           name: artifact-upload-test
           search_artifacts: true
