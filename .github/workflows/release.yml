@@ -17,17 +17,14 @@ jobs:
           name: output
           search_artifacts: true
           workflow: build.yml
-        run: ls
 
-      - name: test output
-        run: ls
-      # - uses: actions/checkout@v3
+      - name: npm release
       # # Setup .npmrc file to publish to GitHub Packages
-      # - uses: actions/setup-node@v3
-      #   with:
-      #     node-version: '16.x'
-      #     registry-url: 'https://registry.npmjs.org'
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
       # # - run: npm install
-      # - run: ls && tar -xvf output.tar.gz && cd output && npm publish --access public
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: ls && tar -xvf output.tar.gz
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
