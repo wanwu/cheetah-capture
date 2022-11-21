@@ -3,31 +3,35 @@
 <div>
 <img src="http://bj.bcebos.com/baidu-rmb-video-cover-1/goods/2022-11/1668701480293/dd3a15fcc40b.png" height="60" alt="cheetah" />
 </div>
-基于自定义编译ffmpeg的截帧工具
+基于自定义编译ffmpeg的截帧工具，支持Mp4、Mov、Avi、Webm、Mkv等主流格式。
+
+## API
+
+`initCapture`：`({workerPath, wasmPath}) => Promise<capture>` 初始化worker环境，拉取wasm，返回capture方法
+接受参数如下
+|  参数   | 类型  | 含义  | 是否必须  |
+|  ----  | ----  |----  |----  |
+| workerPath  | URL / string | woker路径，eg:node_modules/dist/capture.worker.js，因为有woker有同源限制，你可以传递BlobUrl来解决  | y  |
+| wasmPath  | URL / string | wasm路径，eg:node_modules/dist/capture.worker.wasm | y |
+
+`capture`: `(args) => void` 在worker里执行截帧方法
+接受参数如下
+|  参数   | 类型  |含义  | 是否必须  |
+|  ----  | ----  |----  |----  |
+| info  | number[] / number |  传递number是按照数目抽帧，传递数组是指定抽帧的时间 | y |
+| path  | string | workerfs建立文件目录 | n |
+| file  | File / blob |  文件  | y |
+| onChange  | (prev: PrevType, now: nowType, info: {width: number, height: number, duration: number}) => void | 当抽帧结果变化的回调  | n |
+| onSuccess  | (prev: PrevType) => void  | 当抽帧结束并成功的回调  | n |
+| onError  | (errmeg: string) => void | 当抽帧过程出现错误的回调  | n |
+
+例子可以参考 `demo/index.html`。
 
 ## 依赖库&编译工具
 
 * ffmpeg-3.4.8
 * emscripten
 
-## 支持编码
-
-* H.264
-* H.265
-* Mpeg2
-* Mpeg4
-* VP8
-* VP9
-
-## 支持格式
-
-涵盖主流格式。
-
-* Mkv
-* Mov
-* Avi
-* Mp4
-* Webm
 
 ## 准备工作
 
@@ -45,7 +49,7 @@
    source ./emsdk_env.sh
 ```
 
-* `emsdk` 安装于代码库根目录
+* `emsdk` 需要安装于代码库根目录
 
 ## 编译脚本
 
@@ -76,24 +80,3 @@ demo文件夹下`index.html` 使用`live server`启动即可，`live-server --po
 本地提交`npm run commit`
 更新并写入changelog`npm run release`
 
-## api
-
-`initCapture`：`({workerPath, wasmPath}) => Promise<capture>` 初始化worker环境，拉取wasm，返回capture方法
-接受参数如下
-|  参数   | 类型  | 含义  | 是否必须  |
-|  ----  | ----  |----  |----  |
-| workerPath  | URL / string | woker路径，node_modules/dist/capture.worker.js，也可以是blobUrl  | y  |
-| wasmPath  | URL / string | wasm路径，node_modules/dist/capture.worker.wasm | y |
-
-`capture`: `(args) => void` 在worker里执行截帧方法
-接受参数如下
-|  参数   | 类型  |含义  | 是否必须  |
-|  ----  | ----  |----  |----  |
-| info  | number[] / number |  传递number是按照数目抽帧，传递数组是指定抽帧的时间 | y |
-| path  | string | workerfs建立文件目录 | n |
-| file  | File / blob |  文件  | y |
-| onChange  | (prev: PrevType, now: nowType, info: {width: number, height: number, duration: number}) => void | 当抽帧结果变化的回调  | n |
-| onSuccess  | (prev: PrevType) => void  | 当抽帧结束并成功的回调  | n |
-| onError  | (errmeg: string) => void | 当抽帧过程出现错误的回调  | n |
-
-例子可以参考 `demo/index.html`。
