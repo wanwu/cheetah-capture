@@ -82,7 +82,7 @@ demo文件夹下`index.html` 使用`live server`启动即可，`live-server --po
 接受参数如下
 |  参数   | 类型  | 含义  | 是否必须  |
 |  ----  | ----  |----  |----  |
-| workerPath  | URL / string | woker路径，node_modules/dist/capture.worker.js  | y  |
+| workerPath  | URL / string | woker路径，node_modules/dist/capture.worker.js，也可以是blobUrl  | y  |
 | wasmPath  | URL / string | wasm路径，node_modules/dist/capture.worker.wasm | y |
 
 `capture`: `(args) => void` 在worker里执行截帧方法

@@ -120,7 +120,6 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
     // 遍历 寻找最接近当前ms的关键帧
     while (av_read_frame(pFormatCtx, &packet) >= 0)
     {                                             // 读出完整的帧
-        printf("iiiiiiiiiii=>%d\n", pFrame->pts); //
         if (packet.stream_index == videoStream)
         {
             if (avcodec_send_packet(pCodecCtx, &packet) != 0)
