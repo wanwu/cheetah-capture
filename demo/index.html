@@ -21,10 +21,10 @@
     <div id="js_result"></div>
 
     <!-- <script src="./capture.js" type="application/javascript"></script> -->
-    <script src="../tmp/index.js" type="application/javascript"></script>
+    <script src="../dist/index.js" type="application/javascript"></script>
     <script>
-        const workerPath = new URL('http://127.0.0.1:5501/tmp/capture.worker.js');
-        const wasmPath = new URL('http://127.0.0.1:5501/tmp/capture.worker.wasm');
+        const workerPath = new URL('http://127.0.0.1:5501/dist/capture.worker.js');
+        const wasmPath = new URL('http://127.0.0.1:5501/dist/capture.worker.wasm');
         let button = document.querySelector('#js_button');
         let resultContainer = document.querySelector('#js_result');
         let fileInput = document.querySelector('#js_file');
