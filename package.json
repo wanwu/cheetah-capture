@@ -1,7 +1,13 @@
 {
   "name": "cheetah-capture",
   "version": "0.1.2",
-  "description": "基于ffmpeg的wasm截取视频帧",
+  "description": "cheetah-capture是基于ffmpeg的wasm截取视频帧工具",
+  "keywords": [
+    "ffmpeg",
+    "wasm",
+    "frame",
+    "capture"
+  ],
   "main": "dist/index.js",
   "types": "types/index.d.ts",
   "files": [
