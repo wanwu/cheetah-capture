@@ -124,6 +124,7 @@ class ImageCapture {
     capture({id, info, path = '/working', file}) {
         try {
             const name = this.mountFile(file, path, id);
+            let retData = 0;
             this.imageList[id] = [];
             if (info instanceof Array) {
                 // 说明是按照时间抽
@@ -132,20 +133,23 @@ class ImageCapture {
                     this.cCaptureByMs = Module.cwrap('captureByMs', 'number', ['string', 'string', 'number']);
                 }
                 // const imgDataPtr =
-                this.cCaptureByMs(info.join(','), `${path}/${name}`, id);
+                retData = this.cCaptureByMs(info.join(','), `${path}/${name}`, id);
                 this.free();
             } else {
                 this.captureInfo[id] = info;
                 if (!this.cCaptureByCount) {
                     this.cCaptureByCount = Module.cwrap('captureByCount', 'number', ['number', 'string', 'number']);
                 }
-                this.cCaptureByCount(info, `${path}/${name}`, id);
+                retData = this.cCaptureByCount(info, `${path}/${name}`, id);
                 this.free();
                 FS.unmount(path);
                 // 完善信息 这里需要一种模式 是否只一次性postmsg 不一张张读取
+                if (retData === 0) {
+                    throw new Error('Frame draw exception!');
+                }
             }
         } catch (e) {
-            console.log('发生了错误', e);
+            console.log('Error occurred', e);
             // 如果发生错误 通知
             self.postMessage({
                 type: 'receiveError',
