@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.3](https://github.com/wanwu/cheetah-capture/compare/v0.1.0...v0.1.3) (2022-11-27)
+
+
+### Features
+
+* change lib struct ([659766e](https://github.com/wanwu/cheetah-capture/commit/659766e6dcc183f31078cd39d5e1faea079b1a64))
+
+
+### Bug Fixes
+
+* del log ([100fa44](https://github.com/wanwu/cheetah-capture/commit/100fa44da4436384a4a09278f15e04d9a015d75e))
+* fix metadata include rotation ([add084d](https://github.com/wanwu/cheetah-capture/commit/add084d89b2f6103a2277734c855a4d6f05e0968))
+* improve exception handling ([3a214ea](https://github.com/wanwu/cheetah-capture/commit/3a214ea74a6c6f4887c66d1dda965a10f14f9de9))
+
 ### [0.1.2](https://github.com/wanwu/cheetah-capture/compare/v0.1.0...v0.1.2) (2022-11-23)
 
 

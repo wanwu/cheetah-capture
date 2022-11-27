@@ -164,6 +164,7 @@ class ImageCapture {
 const imageCapture = new ImageCapture();
 
 let isInit = false;
+let angle = 0;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function transpostFrame(ptr, id) {
     const data = imageCapture.getImageInfo(ptr / 4);
@@ -175,6 +176,7 @@ function transpostFrame(ptr, id) {
         type: 'receiveImageOnchange',
         ...data,
         id,
+        angle,
     });
     // console.log('transpostFrame==>', id, imageCapture.captureInfo);
     if (imageCapture.imageList[id].length >= imageCapture.captureInfo[id]) {
@@ -186,7 +188,11 @@ function transpostFrame(ptr, id) {
         });
     }
 }
+function setAngle(a: string) {
+    angle = +a;
+}
 self.transpostFrame = transpostFrame;
+self.setAngle = setAngle;
 const initPromise: Promise<URL> = new Promise(res => {
     (self as any).goOnInit = res;
 });

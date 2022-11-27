@@ -36,6 +36,24 @@ AVFrame *initAVFrame(AVCodecContext *pCodecCtx, uint8_t **frameBuffer)
 
     return pFrameRGB;
 }
+
+
+static char *dump_metadata(void *ctx, AVDictionary *m, const char *indent)
+{
+    char *rotate = "0";
+    if (m && !(av_dict_count(m) == 1 && av_dict_get(m, "language", NULL, 0))) {
+        AVDictionaryEntry *tag = NULL;
+        av_log(ctx, AV_LOG_INFO, "%sMetadata:\n", indent);
+        while ((tag = av_dict_get(m, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+            if (strcmp(tag->key, "rotate") == 0) {
+                rotate = tag->value;
+                return rotate;
+            }
+        }
+    }
+    return rotate;
+}
+
 int getIframes(AVFormatContext *qFormatCtx, int videoStream, int timeStamp, int *framesList, int idx)
 {
     // ===============寻找I帧
@@ -202,10 +220,6 @@ int videoStream, int time, FrameInfo *frameInfo, int *Iframe, int counts, int id
     AVFrame *pFrameRGB = initAVFrame(pNewCodecCtx, &frameBuffer);
 
     pFrameRGB = readAVFrame(pNewCodecCtx, pFormatCtx, pFrameRGB, videoStream, time, frameInfo, Iframe, counts);
-    // if (pFrameRGB == NULL) {
-    //     fprintf(stderr, "readAVFrame failed\n");
-    //     return NULL;
-    // }
     ImageData *imageData = NULL;
     imageData = (ImageData *)malloc(sizeof(ImageData));
     imageData->width = (uint32_t)pNewCodecCtx->width;
@@ -302,6 +316,11 @@ ImageData **captureByCount(int count, char *path, int id)
     // 初始化结构体
     frameInfo->lastKeyframe = 0;
     frameInfo->lastIframe = -1;
+    AVStream *st = pFormatCtx->streams[videoStream];
+    char *rotate = dump_metadata(NULL, st->metadata, "    ");
+    static char buf[1024];
+    sprintf(buf, "setAngle(%s)", rotate);
+    emscripten_run_script(buf);
     dataList[0] = *(getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id));
     // emscripten_run_script(get_js_code(dataList[0])); // 把第一帧传出去
     // TODO:

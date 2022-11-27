@@ -71,26 +71,77 @@ const pool = createRequest();
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d')!;
 
-async function getUrl(width: number, height: number, imageDataBuffer):
+function rotateImage(imageData, direction = 'l') {
+    const H = imageData.height;
+    const W = imageData.width;
+    const imgDt1 = new ImageData(H, W);
+    const imgDt2 = new ImageData(H, W);
+    const dt0 = imageData.data;
+    const dt1 = imgDt1.data;
+    const dt2 = imgDt2.data;
+
+    // 2. Transposex
+    let r = 0;
+    let r1 = 0; // index of red pixel in old and new ImageData, respectively
+    for (let y = 0, lenH = H; y < lenH; y++) {
+        for (let x = 0, lenW = W; x < lenW; x++) {
+            r = (x + lenW * y) * 4;
+            r1 = (y + lenH * x) * 4;
+            dt1[r1 + 0] = dt0[r + 0];
+            dt1[r1 + 1] = dt0[r + 1];
+            dt1[r1 + 2] = dt0[r + 2];
+            dt1[r1 + 3] = dt0[r + 3];
+        }
+    }
+
+    // 3. Reverse width / height
+    for (let y = 0, lenH = W; y < lenH; y++) {
+        for (let x = 0, lenW = H; x < lenW; x++) {
+            r = (x + lenW * y) * 4;
+            r1 = direction === 'l'
+                ? (x + lenW * (lenH - 1 - y)) * 4
+                : ((lenW - 1 - x) + lenW * y) * 4;
+            dt2[r1 + 0] = dt1[r + 0];
+            dt2[r1 + 1] = dt1[r + 1];
+            dt2[r1 + 2] = dt1[r + 2];
+            dt2[r1 + 3] = dt1[r + 3];
+        }
+    }
+    return imgDt2;
+}
+async function getUrl(width: number, height: number, imageDataBuffer, angle: number):
 Promise<{url: string, blob?: Blob}> {
-    canvas.width = width;
-    canvas.height = height;
+    let canvasWith = width;
+    let canvasHeight = height;
     const imageData = new ImageData(imageDataBuffer, width, height);
-    ctx.putImageData(imageData, 0, 0, 0, 0, width, height);
+    let imgData = null;
+    switch (angle / 90) {
+        case 1:
+            imgData = rotateImage(imageData, 'r');
+            canvasWith = height;
+            canvasHeight = width;
+            break;
+        case 2:
+            imgData = rotateImage(imageData, 'r');
+            imgData = rotateImage(imageData, 'r');
+            break;
+        case 3:
+            imgData = rotateImage(imageData, 'l');
+            canvasWith = height;
+            canvasHeight = width;
+            break;
+        default:
+            imgData = imageData;
+            break;
+    }
+    canvas.width = canvasWith;
+    canvas.height = canvasHeight;
+    ctx.putImageData(imgData, 0, 0, 0, 0, canvasWith, canvasHeight);
     // const blob = new Blob([imageDataBuffer.buffer], {type: 'image/png'} /* (1) */);
     return {
         url: canvas.toDataURL('image/jpeg'),
         // blob: blob,
     };
-    // return new Promise(resolve => {
-    //     canvas.toBlob(blob => {
-    //         const url = URL.createObjectURL(blob);
-    //         resolve({
-    //             url,
-    //             blob,
-    //         });
-    //     });
-    // });
 }
 
 function startCapture(id: number, info: CaptureInfo['info'], path: CaptureInfo['path'], file: CaptureInfo['file']) {
@@ -118,8 +169,8 @@ export async function initCapture({
     worker.addEventListener('message', async e => {
         switch (e?.data?.type) {
             case Events.receiveImageOnchange: {
-                const {imageDataBuffer, width, height, duration, id} = e.data || {};
-                const img = await getUrl(width, height, imageDataBuffer);
+                const {imageDataBuffer, width, height, duration, id, angle} = e.data || {};
+                const img = await getUrl(width, height, imageDataBuffer, angle);
                 const cbk = pool.getCbk(id);
                 const {onChange} = cbk;
                 const info = {width, height, duration: duration / 1000000};

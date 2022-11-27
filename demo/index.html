@@ -23,8 +23,8 @@
     <!-- <script src="./capture.js" type="application/javascript"></script> -->
     <script src="../dist/index.js" type="application/javascript"></script>
     <script>
-        const workerPath = new URL('http://127.0.0.1:5501/dist/capture.worker.js');
-        const wasmPath = new URL('http://127.0.0.1:5501/dist/capture.worker.wasm');
+        const workerPath = new URL(location.origin + '/dist/capture.worker.js');
+        const wasmPath = new URL(location.origin + '/dist/capture.worker.wasm');
         let button = document.querySelector('#js_button');
         let resultContainer = document.querySelector('#js_result');
         let fileInput = document.querySelector('#js_file');
