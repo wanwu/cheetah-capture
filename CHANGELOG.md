@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://github.com/wanwu/cheetah-capture/compare/v0.1.3...v0.1.4) (2022-12-04)
+
+
+### Bug Fixes
+
+* optimize strategy ([5ffaab1](https://github.com/wanwu/cheetah-capture/commit/5ffaab12a86f23385e7fbada5f17605d08fc9850))
+
 ### [0.1.3](https://github.com/wanwu/cheetah-capture/compare/v0.1.0...v0.1.3) (2022-11-27)
 
 
