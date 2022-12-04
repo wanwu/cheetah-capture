@@ -58,7 +58,6 @@ int getIframes(AVFormatContext *qFormatCtx, int videoStream, int timeStamp, int 
 {
     // ===============寻找I帧
     AVPacket qPacket;
-    printf("解包");
     int count = idx;
     while (av_read_frame(qFormatCtx, &qPacket) >= 0)
     { // 读出完整的帧
@@ -125,8 +124,10 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
     else
     {
         chazhi = timeStamp - nearInum;
+        // printf("命中进来了差值%d,nearInum%d\n", chazhi, nearInum);
         // seek到所在的帧上
-        int ret = av_seek_frame(pFormatCtx, videoStream, timeStamp, AVSEEK_FLAG_BACKWARD);
+        int ret = av_seek_frame(pFormatCtx, videoStream, nearInum, AVSEEK_FLAG_BACKWARD);
+        // int ret = av_seek_frame(pFormatCtx, videoStream, timeStamp, AVSEEK_FLAG_BACKWARD);
         if (ret < 0)
         {
             fprintf(stderr, "av_seek_frame failed\n");
@@ -135,9 +136,11 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
     }
     // printf("chazhi===>chazhi%d,nearInum %d,timeStamp %d,frameInfo->lastKeyframe %d\n", chazhi, nearInum, timeStamp, frameInfo->lastKeyframe);
     int buzhang = 0;
+    int isSeekFrame = 0;
     // 遍历 寻找最接近当前ms的关键帧
     while (av_read_frame(pFormatCtx, &packet) >= 0)
-    {                                             // 读出完整的帧
+    {
+        // 读出完整的帧
         if (packet.stream_index == videoStream)
         {
             if (avcodec_send_packet(pCodecCtx, &packet) != 0)
@@ -146,26 +149,28 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
                 av_packet_unref(&packet);
                 continue;
             }
-            printf("read Frame");
             if (avcodec_receive_frame(pCodecCtx, pFrame) == 0)
             { // 从解码器内部缓存中提取解码后的音视频帧 返回0是成功
                 // printf("pFrame%d\n", FirstPts);
                 int nowTime = pFrame->pts;
+                if (nowTime < nearInum) {
+                    continue;
+                }
                 // 如果是第0帧 插入frameList
                 if (icount == 0)
                 {
                     Iframe[0] = nowTime;
                 }
-                printf("nowtime==>%d,frameInfo->lastKeyframe%d,chazhi%d\n", nowTime, frameInfo->lastKeyframe, chazhi);
+                printf("nowtime==>%d,frameInfo->lastKeyframe%d,chazhi%d,base是%d\n", nowTime, frameInfo->lastKeyframe, chazhi, pFormatCtx->streams[videoStream]->time_base.den
+                            / pFormatCtx->streams[videoStream]->time_base.num);
                 if (
-                    nearInum > frameInfo->lastIframe
-                    || nowTime - frameInfo->lastKeyframe > chazhi
+                    (nowTime - frameInfo->lastKeyframe) >= chazhi
                     || (
-                        nowTime - frameInfo->lastKeyframe
-                        > (
+                        (nowTime - frameInfo->lastKeyframe)
+                        >= (
                             pFormatCtx->streams[videoStream]->time_base.den
                             / pFormatCtx->streams[videoStream]->time_base.num
-                        )
+                        ) * 2
                     )
                 )
                 { // 继续解包寻找需要的帧
@@ -177,6 +182,7 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
                     // av_frame_free(&pFrame);
                     // av_packet_unref(&packet);
                     buzhang = nowTime;
+                    isSeekFrame = 1;
                     // return pFrameRGB;
                     break;
                 }
@@ -184,6 +190,7 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
         }
         // 这一次找到的时间
     }
+    // printf("这一次找到的是%d,isSeekFrame%d\n", buzhang, isSeekFrame);
     frameInfo->lastKeyframe = buzhang;
     // 得到最接近的关键帧之后 给赋值到指针上面 作为上一次的Iframe
     frameInfo->lastIframe = nearInum;
@@ -326,27 +333,30 @@ ImageData **captureByCount(int count, char *path, int id)
     // TODO:
     // seek I frame
     int iFrameCounts = getIframes(pFormatCtx, videoStream, 0, Iframe, 1);
-    printf("===>总共是%d\n", iFrameCounts);
-
-    // 间隔2s 在ffmpeg里面的时间
+        // 间隔2s 在ffmpeg里面的时间
     int base = pFormatCtx->streams[videoStream]->time_base.den / pFormatCtx->streams[videoStream]->time_base.num;
+    printf("===>总共是%d, duration是%d,base是%d\n", iFrameCounts, duration, base);
     // 换算成他的时间单位
-    int tmpDuration = duration / 10 ^ 6 * base;
+    int tmpDuration = duration / 1000 * base / 1000;
     for (int t = 0; t < iFrameCounts; t++)
     {
         printf("===>时间是%d对应的时间%dtempduration是%d\n", t, Iframe[t], tmpDuration);
     }
+    // 判断最后一帧和结束时间的差值
+    int lastIFrameBtwEnd = tmpDuration - Iframe[iFrameCounts - 1];
     int noramlInterval = 2 * base;
+    // 如果最后一帧和结束时间的差值大于2s则可插入剩余图片
+    int lastFrameAdd = lastIFrameBtwEnd > noramlInterval ? 0: 1;
     // 找到关键帧数目后 根据长度计算补齐位置
     int timeFrameList[count + 1];
     // 遍历 补齐剩下缺失的帧
     if (iFrameCounts >= count)
     {
-        // 超出需要删掉
-        // TODO: 删除逻辑待定 暂时先取他前面的
+        // 超出需要删掉 按照区间取n个
+        int multiple = (iFrameCounts - 1) / (count - 1);
         for (int i = 0; i < count; i++)
         {
-            timeFrameList[i] = Iframe[i];
+            timeFrameList[i] = Iframe[multiple*i];
         }
     }
     else
@@ -365,8 +375,8 @@ ImageData **captureByCount(int count, char *path, int id)
         }
         else
         {
-            int interval = remain / iFrameCounts;
-            int left = remain % iFrameCounts;
+            int interval = remain / (iFrameCounts - lastFrameAdd);
+            int left = remain % (iFrameCounts - lastFrameAdd);
             // 缺失需要补齐
             int index = 0;
             for (int i = 0; i < iFrameCounts; i++)
@@ -375,14 +385,16 @@ ImageData **captureByCount(int count, char *path, int id)
                 timeFrameList[index] = Iframe[i];
                 index++;
                 // 最后一张图后面没有 均分在前面
-                if (i != iFrameCounts - 1)
+                if ((i != iFrameCounts - 1) || (lastFrameAdd == 0))
                 {
                     int frameNumWillBePush = interval + (i < left ? 1 : 0);
-                    int groupTimeInterval = ((Iframe[i + 1] - Iframe[i]) * 0.1);
+                    int intervalBetweenTowIFrame = (i != iFrameCounts - 1) ? Iframe[i + 1] - Iframe[i]: lastIFrameBtwEnd;
+                    int groupTimeInterval = (intervalBetweenTowIFrame * 0.1);
                     int realInterval = 0;
+                    // 如果比10%还要密集 直接取区间均值
                     if (frameNumWillBePush > 10)
                     {
-                        realInterval = (tmpDuration / count > noramlInterval ? noramlInterval : tmpDuration / count);
+                        realInterval = (intervalBetweenTowIFrame / count > noramlInterval ? noramlInterval : intervalBetweenTowIFrame / count);
                     }
                     else
                     {
@@ -397,11 +409,10 @@ ImageData **captureByCount(int count, char *path, int id)
                 }
             }
         }
+        // for (int i = 0; i < count ; i++) {
+        //     printf("最终时间是第%dzhang，第%ds\n", i,timeFrameList[i]);
+        // }
     }
-    // for (int i = 0; i < count; i++)
-    // {
-    //     printf("时间列表是%d", timeFrameList[i]);
-    // }
     // 剩下逻辑和指定时间抽的类似
     av_seek_frame(pFormatCtx, videoStream, 0, AVSEEK_FLAG_BACKWARD);
 
