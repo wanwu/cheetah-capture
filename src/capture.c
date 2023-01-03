@@ -38,20 +38,16 @@ AVFrame *initAVFrame(AVCodecContext *pCodecCtx, uint8_t **frameBuffer)
 }
 
 
-static char *dump_metadata(void *ctx, AVDictionary *m, const char *indent)
+static char *dump_metadata(void *ctx, AVDictionary *m, const char *indent, const char *def)
 {
-    char *rotate = "0";
-    if (m && !(av_dict_count(m) == 1 && av_dict_get(m, "language", NULL, 0))) {
-        AVDictionaryEntry *tag = NULL;
-        av_log(ctx, AV_LOG_INFO, "%sMetadata:\n", indent);
-        while ((tag = av_dict_get(m, "", tag, AV_DICT_IGNORE_SUFFIX))) {
-            if (strcmp(tag->key, "rotate") == 0) {
-                rotate = tag->value;
-                return rotate;
-            }
-        }
+    char *info = def;
+    AVDictionaryEntry *tag = NULL;
+    AVDictionaryEntry *result = av_dict_get(m, indent, NULL, 0);
+    printf("遍历到的内容%s,值是%s\n", indent, result->value);
+    if (result->value) {
+        return result->value;
     }
-    return rotate;
+    return info;
 }
 
 int getIframes(AVFormatContext *qFormatCtx, int videoStream, int timeStamp, int *framesList, int idx)
@@ -282,6 +278,10 @@ ImageData **captureByCount(int count, char *path, int id)
     int videoStream = -1;
     // 初始化读取文件
     AVCodecContext *pCodecCtx = initFileAndGetInfo(pFormatCtx, path, pCodec, &videoStream);
+    char *description = dump_metadata(NULL, pFormatCtx->metadata, "description", "");
+    static char setDescription[1024];
+    sprintf(setDescription, "setDescription(`%s`, %d)", description, id);
+    emscripten_run_script(setDescription);
     pCodec = initDecoder(pCodecCtx, pFormatCtx);
     if (pCodec == NULL)
     {
@@ -324,10 +324,10 @@ ImageData **captureByCount(int count, char *path, int id)
     frameInfo->lastKeyframe = 0;
     frameInfo->lastIframe = -1;
     AVStream *st = pFormatCtx->streams[videoStream];
-    char *rotate = dump_metadata(NULL, st->metadata, "    ");
-    static char buf[1024];
-    sprintf(buf, "setAngle(%s)", rotate);
-    emscripten_run_script(buf);
+    char *rotate = dump_metadata(NULL, st->metadata, "rotate", "0");
+    static char setAngle[1024];
+    sprintf(setAngle, "setAngle(%s, %d)", rotate, id);
+    emscripten_run_script(setAngle);
     dataList[0] = *(getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id));
     // emscripten_run_script(get_js_code(dataList[0])); // 把第一帧传出去
     // TODO:

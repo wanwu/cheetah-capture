@@ -164,7 +164,7 @@ class ImageCapture {
 const imageCapture = new ImageCapture();
 
 let isInit = false;
-let angle = 0;
+const metaDataMap = {};
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function transpostFrame(ptr, id) {
     const data = imageCapture.getImageInfo(ptr / 4);
@@ -176,7 +176,7 @@ function transpostFrame(ptr, id) {
         type: 'receiveImageOnchange',
         ...data,
         id,
-        angle,
+        meta: metaDataMap[id] || {},
     });
     // console.log('transpostFrame==>', id, imageCapture.captureInfo);
     if (imageCapture.imageList[id].length >= imageCapture.captureInfo[id]) {
@@ -184,15 +184,20 @@ function transpostFrame(ptr, id) {
         self.postMessage({
             type: 'receiveImageOnSuccess',
             id,
+            meta: metaDataMap[id] || {},
             // ...imageCapture.imageList[id], //TODO: 这个是否post未确定
         });
     }
 }
-function setAngle(a: string) {
-    angle = +a;
+function setAngle(a: string, id: number) {
+    metaDataMap[id].angle = +a;
+}
+function setDescription(a: string, id: number) {
+    metaDataMap[id].description = a;
 }
 self.transpostFrame = transpostFrame;
 self.setAngle = setAngle;
+self.setDescription = setDescription;
 const initPromise: Promise<URL> = new Promise(res => {
     (self as any).goOnInit = res;
 });
@@ -209,6 +214,7 @@ self.addEventListener('message', e => {
         (self as any).goOnInit(info);
     }
     if (isInit && type === 'startCapture') {
+        metaDataMap[id] = {};
         imageCapture.capture({
             id,
             info,
@@ -231,7 +237,6 @@ self.addEventListener('message', e => {
     },
     onRuntimeInitialized: () => {
         isInit = true;
-        // console.log('wasm success');
         self.postMessage({
             type: 'init',
             data: {},

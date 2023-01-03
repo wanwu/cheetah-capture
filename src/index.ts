@@ -33,10 +33,12 @@ interface nowType {
     url: string;
     blob?: Blob;
 }
-
+interface MetaDatatype {
+    description: string;
+}
 interface CallbackType {
     onChange?: (prev: PrevType, now: nowType, info: {width: number, height: number, duration: number}) => void;
-    onSuccess?: (prev: PrevType) => void;
+    onSuccess?: (prev: PrevType & {meta: MetaDatatype}) => void;
     onError?: (errmeg: string) => void;
 }
 interface MapInfoType extends CallbackType{
@@ -169,7 +171,8 @@ export async function initCapture({
     worker.addEventListener('message', async e => {
         switch (e?.data?.type) {
             case Events.receiveImageOnchange: {
-                const {imageDataBuffer, width, height, duration, id, angle} = e.data || {};
+                const {imageDataBuffer, width, height, duration, id, meta = {}} = e.data || {};
+                const {angle = 0} = meta;
                 const img = await getUrl(width, height, imageDataBuffer, angle);
                 const cbk = pool.getCbk(id);
                 const {onChange} = cbk;
@@ -180,11 +183,11 @@ export async function initCapture({
                 break;
             }
             case Events.receiveImageOnSuccess: {
-                const {id} = e.data || {};
+                const {id, meta} = e.data || {};
                 const cbk = pool.getCbk(id);
                 const {onSuccess} = cbk;
                 const {url} = pool.getCbk(id);
-                onSuccess && onSuccess({url});
+                onSuccess && onSuccess({url, meta});
                 break;
             }
             case Events.receiveError: {

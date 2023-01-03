@@ -1,6 +1,6 @@
 {
   "name": "cheetah-capture",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "cheetah-capture是基于ffmpeg的wasm截取视频帧工具",
   "keywords": [
     "ffmpeg",
@@ -23,7 +23,7 @@
     "eslint": "eslint --fix ./src/",
     "build": "bash ./script/build.sh",
     "commit": "git cz",
-    "release": "standard-version --skip.commit && git commit --amend"
+    "release": "standard-version --skip.commit && git add . && git commit --amend"
   },
   "author": "hixuanxuan",
   "homepage": "",
