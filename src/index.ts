@@ -176,7 +176,7 @@ export async function initCapture({
                 const img = await getUrl(width, height, imageDataBuffer, angle);
                 const cbk = pool.getCbk(id);
                 const {onChange} = cbk;
-                const info = {width, height, duration: duration / 1000000};
+                const info = {width, height, duration: Number(duration) / 1000};
                 const {url} = pool.getCbk(id);
                 onChange && onChange({url}, img, info);
                 url.push(img.url);
