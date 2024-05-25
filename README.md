@@ -38,6 +38,7 @@
 * 编译前需要下载 [ffmpeg-3.4.8.tar.xz](http://ffmpeg.org/releases/ffmpeg-3.4.8.tar.xz) 并解压至 `script` 目录下方。
 
 * emcc下载:git clone https://github.com/emscripten-core/emsdk.git
+* 安装emsdk，在emsdk目录下执行
 
 ```shell
   git pull
@@ -52,7 +53,7 @@
 * `emsdk` 需要安装于代码库根目录
 
 ## 编译脚本
-
+* 安装依赖 `npm i`，执行script目录下的脚本
 `script`下面是编译脚本
 `build_ffmpeg-3.4.8.sh` 编译本地c编译环境的ffmpeg的lib库
 `build-emcc.sh` 编译emcc环境需要的ffmpeg的lib库，编译结果lib/ffmpeg-emcc

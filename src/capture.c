@@ -4,6 +4,7 @@
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
+#include <libavutil/avutil.h>
 
 typedef struct
 {
@@ -18,6 +19,10 @@ typedef struct
     int lastKeyframe;
     int lastIframe;
 } FrameInfo;
+
+// double av_q2d(AVRational r) {
+//     return r.num / (double) r.den;
+// }
 
 AVFrame *initAVFrame(AVCodecContext *pCodecCtx, uint8_t **frameBuffer)
 {
@@ -227,7 +232,21 @@ int videoStream, int time, FrameInfo *frameInfo, int *Iframe, int counts, int id
     imageData = (ImageData *)malloc(sizeof(ImageData));
     imageData->width = (uint32_t)pNewCodecCtx->width;
     imageData->height = (uint32_t)pNewCodecCtx->height;
-    imageData->duration = (uint32_t)pFormatCtx->duration;
+    // 计算视频的实际时长
+    if(pFormatCtx->duration!=AV_NOPTS_VALUE){
+        int hours,mins,secs,us;
+        int64_t duration=pFormatCtx->duration+5000;
+        secs=duration/AV_TIME_BASE;
+        us=duration%AV_TIME_BASE;//1000000
+        mins=secs/60;
+        secs%=60;
+        hours=mins/60;
+        mins%=60;
+        int totalMilliseconds = (hours * 3600000) + (mins * 60000) + (secs * 1000) + (100 * us / AV_TIME_BASE);
+        imageData->duration = (uint32_t)totalMilliseconds;
+    } else {
+        imageData->duration = 0;
+    }
     imageData->data = getFrameBuffer(pFrameRGB, pNewCodecCtx);
     emscripten_run_script(get_js_code(*imageData, id));
     av_frame_free(&pFrameRGB);

@@ -158,6 +158,10 @@ class ImageCapture {
             });
         }
     }
+    getMetaData(key) {
+        // 获取视频元数据
+        
+    }
 }
 
 // importScripts('./capture.js');
