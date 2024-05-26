@@ -1,0 +1,30 @@
+name: publish package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: macos-12
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download Artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          name: output
+          search_artifacts: true
+          workflow: build.yml
+
+      - name: npm release
+      # # Setup .npmrc file to publish to GitHub Packages
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      # # - run: npm install
+      - run: ls && tar -xvf output.tar.gz && cd output && npm publish --access public --tag beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -554,6 +554,36 @@ ImageData **captureByMs(char *ms, char *path, int id)
     avformat_close_input(&pFormatCtx);
     return dataList;
 }
+// 获取视频的元数据
+char *getMetaDataByKey(const char *key, const char *path) {
+    AVFormatContext *pFormatCtx = avformat_alloc_context();
+    if (!pFormatCtx) {
+        fprintf(stderr, "Could not allocate AVFormatContext.\n");
+        return NULL;
+    }
+
+    AVCodec *pCodec = NULL;
+    int videoStream = -1;
+    AVCodecContext *pCodecCtx = initFileAndGetInfo(pFormatCtx, path, pCodec, &videoStream);
+
+    if (!pCodecCtx) {
+        fprintf(stderr, "Failed to initialize file and get codec context.\n");
+        avformat_free_context(pFormatCtx);
+        return NULL;
+    }
+
+    const char *value = dump_metadata(NULL, pFormatCtx->metadata, key, "");
+    avformat_free_context(pFormatCtx);
+
+    if (!value) {
+        fprintf(stderr, "Failed to get metadata value.\n");
+        return NULL;
+    }
+
+    // 创建一个字符串副本，因为原始值可能随 pFormatCtx 释放而失效
+    char *result = strdup(value);
+    return result;
+}
 int main(int argc, char const *argv[])
 {
     av_register_all();

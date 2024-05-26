@@ -40,20 +40,33 @@
             console.log('===>file', file);
             let startTime = Date.now();
             capturePro.then((res) => {
-                res.capture({
+                res.mountFile({
                     file,
-                    info: 11,
-                    onChange: (list={}, now={}, info={}) => {
-                        console.log('==>onchange', list, now, info);
-                        const { width, height, duration } = info;
-                        const img = document.createElement('img');
-                        img.src = now.url;
-                        resultContainer.append(img);
+                    onSuccess: () => {
+                        console.log('===>mountFile success');
+                        res.getMetadata({
+                            info: 'aigc',
+                            onSuccess: (data) => {
+                                console.log('===>getMetadata', data);
+                            }
+                        });
+                        res.capture({
+                            file,
+                            info: 11,
+                            onChange: (list = {}, now = {}, info = {}) => {
+                                console.log('==>onchange', list, now, info);
+                                const { width, height, duration } = info;
+                                const img = document.createElement('img');
+                                img.src = now.url;
+                                resultContainer.append(img);
 
-                        infoContainer.innerHTML = `耗时：${Date.now() - startTime}ms<br>宽度：${width}<br>高度：${height}<br>时长：${duration}s`;
-                    },
-                    onSuccess: (list) => {
-                        console.log('==>onSuccess', list);
+                                infoContainer.innerHTML = `耗时：${Date.now() - startTime}ms<br>宽度：${width}<br>高度：${height}<br>时长：${duration}s`;
+                            },
+                            onSuccess: (list) => {
+                                console.log('==>onSuccess', list);
+                                res.free({onSuccess: () => {console.log('===free success')}});
+                            }
+                        })
                     }
                 })
             })

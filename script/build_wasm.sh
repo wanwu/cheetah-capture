@@ -21,7 +21,7 @@ emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH
     -s WASM=1 \
     -s TOTAL_MEMORY=$TOTAL_MEMORY \
     -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-    -s EXPORTED_FUNCTIONS='["_main", "_free", "_captureByMs", "_captureByCount"]' \
+    -s EXPORTED_FUNCTIONS='["_main", "_free", "_captureByMs", "_captureByCount", "_getMetaDataByKey"]' \
     -s ASSERTIONS=0 \
     -s ALLOW_MEMORY_GROWTH=1 \
     -o $WEB_CAPTURE_PATH/dist/capture.worker.js

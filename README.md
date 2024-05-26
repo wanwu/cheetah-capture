@@ -6,6 +6,7 @@
 基于自定义编译ffmpeg的截帧工具，支持Mp4、Mov、Avi、Webm、Mkv等主流格式。
 
 ## API
+> 整体调用流程，调用`initCapture`方法，传入worker和wasm路径，返回cheetahCapture对象，调用cheetahCapture上的方法进行mount文件、抽帧、获取元数据等操作，结束后调用free进行释放。
 
 `initCapture`：`({workerPath, wasmPath}) => Promise<capture>` 初始化worker环境，拉取wasm，返回capture方法
 接受参数如下
@@ -14,18 +15,32 @@
 | workerPath  | URL / string | woker路径，eg:node_modules/dist/capture.worker.js，因为有woker有同源限制，你可以传递BlobUrl来解决  | y  |
 | wasmPath  | URL / string | wasm路径，eg:node_modules/dist/capture.worker.wasm | y |
 
+`mountFile`: `(file: File) => string` 挂载文件，返回mountFile的`fileName`，接受参数如下
+接受参数如下
+|  参数   | 类型  |含义  | 是否必须  |
+|  ----  | ----  |----  |----  |
+| path  | string | workerfs建立文件目录 | n，默认`/working` |
+| file  | File / blob |  文件  | y |
+
+为了兼容V0.1.x版本，`capture`方法兼容不调用mountFile可以直接使用，传入mountFile需要的参数，会在capture内部进行mountFile，如果您选择这种方式我们将会主动接管你的生命周期，为你进行内存释放操作。
 `capture`: `(args) => void` 在worker里执行截帧方法
 接受参数如下
 |  参数   | 类型  |含义  | 是否必须  |
 |  ----  | ----  |----  |----  |
 | info  | number[] / number |  传递number是按照数目抽帧，传递数组是指定抽帧的时间 | y |
 | path  | string | workerfs建立文件目录 | n |
-| file  | File / blob |  文件  | y |
+| file  | File / blob |  文件  | n，v0.1必须 |
 | onChange  | (prev: PrevType, now: nowType, info: {width: number, height: number, duration: number}) => void | 当抽帧结果变化的回调  | n |
 | onSuccess  | (prev: PrevType) => void  | 当抽帧结束并成功的回调  | n |
 | onError  | (errmeg: string) => void | 当抽帧过程出现错误的回调  | n |
 
-例子可以参考 `demo/index.html`。
+`getMetadata: (args: {info: string; })=> void` 获取视频元数据，具体args参数如下
+|  参数   | 类型  |含义  | 是否必须  |
+|  ----  | ----  |----  |----  |
+| info  | string |  要获取的元数据的key | y |
+| onSuccess  | (args: {meta: string}) => void  | 读取成功的回调，无论是否有该key都会执行，没有返回的空字符串  | n |
+
+* 使用例子可以参考 `demo/index.html`。
 
 ## 依赖库&编译工具
 

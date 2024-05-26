@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 import {Events} from './consts';
 let captureWorker: null | Worker = null;
 function workerPost(info: {type: string, [key: string]: unknown}) {
@@ -26,7 +27,7 @@ async function initWorker(url: URL|string, wasmPath: URL|string): Promise<Worker
     return promise;
 }
 interface PrevType {
-    url: string[];
+    url?: string[];
     blob?: Blob[];
 }
 interface nowType {
@@ -38,34 +39,38 @@ interface MetaDatatype {
 }
 interface CallbackType {
     onChange?: (prev: PrevType, now: nowType, info: {width: number, height: number, duration: number}) => void;
-    onSuccess?: (prev: PrevType & {meta: MetaDatatype}) => void;
+    onSuccess?: ((prev: PrevType & {meta: MetaDatatype | string}) => void) | (() => void);
     onError?: (errmeg: string) => void;
 }
 interface MapInfoType extends CallbackType{
-    url: string[];
+    url?: string[];
 }
 interface CaptureInfo extends CallbackType{
     info: number[] | number;
     path?: string;
-    file: File;
+    file: File | Blob;
     returnType?: 'blob' | 'base64'; // 默认blob
 }
 function createRequest() {
     let currentId = 0;
-    const map: Map<number, MapInfoType> = new Map();
+    const map: Map<number, CallbackType & {cache?: MapInfoType}> = new Map();
     return {
         // 获取视频唯一id
-        setFrameCallback(item: CallbackType) {
+        setCallback(item: CallbackType) {
             const id = ++currentId;
             map.set(currentId, {
                 ...item,
-                url: [],
+                cache: {},
             });
             return id;
         },
         // 设置
         getCbk(idx: number) {
             return map.get(idx);
+        },
+        // 删除
+        deleteCbk(idx: number) {
+            map.delete(idx);
         },
     };
 }
@@ -155,11 +160,52 @@ function startCapture(id: number, info: CaptureInfo['info'], path: CaptureInfo['
         file,
     });
 }
-function capture(data: CaptureInfo) {
-    const {info, path, file, ...func} = data;
-    const id = pool.setFrameCallback(func);
-    startCapture(id, info, path, file);
+
+class Capture {
+    file: File | Blob = null;
+    path: string = null;
+    capture(data: CaptureInfo) {
+        const {info, path = this.path, file = this.file, ...func} = data;
+        this.file = file;
+        this.path = path;
+        const id = pool.setCallback(func);
+        startCapture(id, info, path, this.file);
+    }
+
+    mountFile(data: CaptureInfo) {
+        const {file, path, info, ...func} = data;
+        this.file = file;
+        this.path = path;
+        const id = pool.setCallback(func);
+        workerPost({
+            type: Events.mountFile,
+            id,
+            path,
+            file,
+        });
+    }
+
+    getMetadata(data: CaptureInfo) {
+        const {info, ...func} = data;
+        const id = pool.setCallback(func);
+        workerPost({
+            type: Events.getMetadata,
+            id,
+            info, // 相当于是key
+        });
+    }
+
+    free(data: CaptureInfo) {
+        const id = pool.setCallback(data || {});
+        workerPost({
+            type: Events.free,
+            id,
+        });
+    }
+
 }
+
+
 export async function initCapture({
     workerPath,
     wasmPath,
@@ -177,17 +223,21 @@ export async function initCapture({
                 const cbk = pool.getCbk(id);
                 const {onChange} = cbk;
                 const info = {width, height, duration: Number(duration) / 1000};
-                const {url} = pool.getCbk(id);
-                onChange && onChange({url}, img, info);
-                url.push(img.url);
+                const {cache} = pool.getCbk(id);
+                cache.url = cache?.url || [];
+                onChange && onChange({url: cache.url}, img, info);
+                cache.url.push(img.url);
                 break;
             }
             case Events.receiveImageOnSuccess: {
                 const {id, meta} = e.data || {};
                 const cbk = pool.getCbk(id);
                 const {onSuccess} = cbk;
-                const {url} = pool.getCbk(id);
-                onSuccess && onSuccess({url, meta});
+                const {cache} = pool.getCbk(id);
+                onSuccess && onSuccess({
+                    url: cache.url,
+                    meta: meta as MetaDatatype,
+                });
                 break;
             }
             case Events.receiveError: {
@@ -197,13 +247,31 @@ export async function initCapture({
                 onError && onError(errmsg);
                 break;
             }
-            default:
+            case Events.getMetadataOnSuccess: {
+                const {id, meta} = e.data || {};
+                const cbk = pool.getCbk(id);
+                const {onSuccess} = cbk;
+                onSuccess && onSuccess({meta: meta as string});
                 break;
+            }
+            case Events.mountFileSuccess: {
+                const {id} = e.data || {};
+                const cbk = pool.getCbk(id);
+                const {onSuccess} = cbk;
+                onSuccess && onSuccess();
+                break;
+            }
+            case Events.freeOnSuccess: {
+                const {id} = e.data || {};
+                const cbk = pool.getCbk(id);
+                const {onSuccess} = cbk;
+                onSuccess && onSuccess();
+                pool.deleteCbk(id);
+                break;
+            }
         }
     });
-    return {
-        capture,
-    };
+    return new Capture();
 }
 
 export default initCapture;

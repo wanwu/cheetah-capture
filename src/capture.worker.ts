@@ -1,3 +1,4 @@
+import {Events} from './consts';
 interface CMsgRetType {
     width: number;
     height: number;
@@ -12,6 +13,10 @@ class ImageCapture {
     imageList: Record<number, CMsgRetType[]>;
     imgDataPtrList: number[];
     imgBufferPtrList: number[];
+    name: string;
+    path: string;
+    file: File | Blob;
+
     constructor() {
         this.isMKDIR = false;
         this.cCaptureByCount = null;
@@ -20,6 +25,9 @@ class ImageCapture {
         this.captureInfo = {};
         this.imgDataPtrList = [];
         this.imgBufferPtrList = [];
+        this.name = '';
+        this.file = null;
+        this.path = '/working';
     }
     getImageInfo(imgDataPtr): CMsgRetType {
         const width = Module.HEAPU32[imgDataPtr];
@@ -90,11 +98,13 @@ class ImageCapture {
         return dataArr;
     }
     // 加载文件
-    mountFile(file: File | Blob, MOUNT_DIR: string, id: number) {
+    mountFile(file: File | Blob, MOUNT_DIR: string = this.path, id: number) {
+        // 防止重复mount dir
         if (!this.isMKDIR) {
             FS.mkdir(MOUNT_DIR);
             this.isMKDIR = true;
         }
+        this.file = file;
         const data: {files?: File[], blobs?: Array<{name: string, data: Blob}>} = {};
         let name: string = '';
         // 判断类型 如果是blob转file
@@ -108,9 +118,15 @@ class ImageCapture {
         }
         // @ts-ignore
         FS.mount(WORKERFS, data, MOUNT_DIR);
+        this.name = name;
+        this.path = MOUNT_DIR;
+        self.postMessage({
+            type: Events.mountFileSuccess,
+            id,
+        });
         return name;
     }
-    free() {
+    free({id}) {
         // 释放指针内存
         this.imgDataPtrList.forEach(ptr => {
             Module._free(ptr);
@@ -120,10 +136,26 @@ class ImageCapture {
             Module._free(ptr);
         });
         this.imgBufferPtrList = [];
+        // 释放文件
+        FS.unmount(this.path);
+        // 清除副作用
+        this.isMKDIR = false;
+        this.name = '';
+        this.file = null;
+        this.path = '/working';
+        self.postMessage({
+            type: Events.freeOnSuccess,
+            id,
+        });
     }
-    capture({id, info, path = '/working', file}) {
+    capture({id, info, path = this.path, file = this.file}) {
+        let isOnce = false;
+        this.path = path;
         try {
-            const name = this.mountFile(file, path, id);
+            if (!this.name) {
+                isOnce = true;
+                this.name = this.mountFile(file, path, id);
+            }
             let retData = 0;
             this.imageList[id] = [];
             if (info instanceof Array) {
@@ -132,21 +164,21 @@ class ImageCapture {
                 if (!this.cCaptureByMs) {
                     this.cCaptureByMs = Module.cwrap('captureByMs', 'number', ['string', 'string', 'number']);
                 }
-                // const imgDataPtr =
-                retData = this.cCaptureByMs(info.join(','), `${path}/${name}`, id);
-                this.free();
+                retData = this.cCaptureByMs(info.join(','), `${path}/${this.name}`, id);
             } else {
                 this.captureInfo[id] = info;
                 if (!this.cCaptureByCount) {
                     this.cCaptureByCount = Module.cwrap('captureByCount', 'number', ['number', 'string', 'number']);
                 }
-                retData = this.cCaptureByCount(info, `${path}/${name}`, id);
-                this.free();
-                FS.unmount(path);
+                retData = this.cCaptureByCount(info, `${path}/${this.name}`, id);
                 // 完善信息 这里需要一种模式 是否只一次性postmsg 不一张张读取
                 if (retData === 0) {
+                    this.free();
                     throw new Error('Frame draw exception!');
                 }
+            }
+            if (isOnce) {
+                this.free();
             }
         } catch (e) {
             console.log('Error occurred', e);
@@ -158,9 +190,21 @@ class ImageCapture {
             });
         }
     }
-    getMetaData(key) {
-        // 获取视频元数据
-        
+
+    getMetadata(key: string, id: number) {
+        // getMetadata(key, path, id)
+        if (!this.name) {
+            throw new Error('Please mount file first!');
+        }
+        const cGetMetadata = Module.cwrap('getMetaDataByKey', 'string', ['string', 'string', 'number']);
+        const metadataValue = cGetMetadata(key, `${this.path}/${this.name}`, id);
+        // cGetMetadata();
+
+        self.postMessage({
+            type: Events.getMetadataOnSuccess,
+            meta: metadataValue,
+            id,
+        });
     }
 }
 
@@ -169,6 +213,43 @@ const imageCapture = new ImageCapture();
 
 let isInit = false;
 const metaDataMap = {};
+
+self.addEventListener('message', e => {
+    const {
+        type,
+        id,
+        info,
+        path,
+        file,
+    } = e.data;
+    if (type === 'initPath') {
+        (self as any).goOnInit(info);
+    }
+
+    if (type === 'mountFile') {
+        imageCapture.mountFile(file, path, id);
+    }
+
+    if (isInit && type === 'startCapture') {
+        metaDataMap[id] = {};
+        imageCapture.capture({
+            id,
+            info,
+            path,
+            file,
+        });
+    }
+
+    if (type === Events.getMetadata) {
+        imageCapture.getMetadata(info, id);
+    }
+
+    if (type === Events.free) {
+        imageCapture.free({id});
+    }
+});
+
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function transpostFrame(ptr, id) {
     const data = imageCapture.getImageInfo(ptr / 4);
@@ -182,7 +263,6 @@ function transpostFrame(ptr, id) {
         id,
         meta: metaDataMap[id] || {},
     });
-    // console.log('transpostFrame==>', id, imageCapture.captureInfo);
     if (imageCapture.imageList[id].length >= imageCapture.captureInfo[id]) {
         // 说明已经到了数目 可以postonfinish事件
         self.postMessage({
@@ -205,29 +285,6 @@ self.setDescription = setDescription;
 const initPromise: Promise<URL> = new Promise(res => {
     (self as any).goOnInit = res;
 });
-self.addEventListener('message', e => {
-    // console.log('receivemessage', e.data);
-    const {
-        type,
-        id,
-        info,
-        path,
-        file,
-    } = e.data;
-    if (type === 'initPath') {
-        (self as any).goOnInit(info);
-    }
-    if (isInit && type === 'startCapture') {
-        metaDataMap[id] = {};
-        imageCapture.capture({
-            id,
-            info,
-            path,
-            file,
-        });
-    }
-});
-
 
 (self as any).Module = {
     instantiateWasm: async (info, receiveInstance) => {
