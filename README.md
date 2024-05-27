@@ -40,6 +40,11 @@
 | info  | string |  要获取的元数据的key | y |
 | onSuccess  | (args: {meta: string}) => void  | 读取成功的回调，无论是否有该key都会执行，没有返回的空字符串  | n |
 
+`free: (args)=> void` 释放文件占用的存储空间，接受参数如下，释放的是文件，目录文件夹不会被释放
+|  参数   | 类型  |含义  | 是否必须  |
+|  ----  | ----  |----  |----  |
+| onSuccess  | () => void  | 成功的回调  | n |
+
 * 使用例子可以参考 `demo/index.html`。
 
 ## 依赖库&编译工具

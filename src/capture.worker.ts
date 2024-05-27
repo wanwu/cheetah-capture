@@ -139,7 +139,6 @@ class ImageCapture {
         // 释放文件
         FS.unmount(this.path);
         // 清除副作用
-        this.isMKDIR = false;
         this.name = '';
         this.file = null;
         this.path = '/working';
@@ -173,12 +172,12 @@ class ImageCapture {
                 retData = this.cCaptureByCount(info, `${path}/${this.name}`, id);
                 // 完善信息 这里需要一种模式 是否只一次性postmsg 不一张张读取
                 if (retData === 0) {
-                    this.free();
+                    this.free({id});
                     throw new Error('Frame draw exception!');
                 }
             }
             if (isOnce) {
-                this.free();
+                this.free({id});
             }
         } catch (e) {
             console.log('Error occurred', e);

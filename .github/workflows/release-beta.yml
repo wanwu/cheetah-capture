@@ -1,4 +1,4 @@
-name: publish package
+name: publish package beta
 
 on:
   workflow_dispatch:
