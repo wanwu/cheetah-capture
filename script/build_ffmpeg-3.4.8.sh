@@ -13,7 +13,7 @@ rm -rf $WEB_CAPTURE_PATH/lib/ffmpeg-3.4.8
 
 cd $FFMPEG_PATH
 
-./configure --prefix=/Users/mengxiaoxuan/Downloads/web-capture-master/lib/ffmpeg-3.4.8 --disable-shared --enable-static --disable-videotoolbox --disable-audiotoolbox --disable-securetransport --disable-iconv --disable-x86asm
+./configure --prefix=$WEB_CAPTURE_PATH/lib/ffmpeg-3.4.8 --disable-shared --enable-static --disable-videotoolbox --disable-audiotoolbox --disable-securetransport --disable-iconv --disable-x86asm
 
 make -j6
 

@@ -46,7 +46,7 @@ interface MapInfoType extends CallbackType{
     url?: string[];
 }
 interface CaptureInfo extends CallbackType{
-    info?: number[] | number;
+    info?: number[] | number | string;
     path?: string;
     file: File | Blob;
     returnType?: 'blob' | 'base64'; // 默认blob

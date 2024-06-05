@@ -80,6 +80,7 @@
 `build_wasm.sh` 使用ems编译wasm 和 glue code & worker code
 `build.sh` 同上以及生成dts类型
 
+如果只修改了c的代码和ts代码，直接执行`sh build_wasm.sh`即可。
 ## demo运行
 
 demo文件夹下`index.html` 使用`live server`启动即可，`live-server --port=5501`
