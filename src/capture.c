@@ -5,6 +5,8 @@
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 #include <libavutil/avutil.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct
 {
@@ -23,6 +25,40 @@ typedef struct
 // double av_q2d(AVRational r) {
 //     return r.num / (double) r.den;
 // }
+
+char* iso8859_1_to_utf8(const char* input) {
+    if (input == NULL) return NULL;
+
+    // 计算 UTF-8 字符串的长度
+    size_t len = 0;
+    for (const char* p = input; *p != '\0'; p++) {
+        unsigned char ch = (unsigned char)*p;
+        len += (ch < 128) ? 1 : 2;  // 128-255 范围的字符需要两个字节
+    }
+
+    // 分配内存（+1 为了 null terminator）
+    char* output = (char*)malloc(len + 1);
+    if (output == NULL) {
+        perror("malloc failed");
+        return NULL;
+    }
+
+    // 填充输出字符串
+    char* out_ptr = output;
+    for (const char* p = input; *p != '\0'; p++) {
+        unsigned char ch = (unsigned char)*p;
+        if (ch < 128) {
+            *out_ptr++ = ch;
+        } else {
+            *out_ptr++ = 0xC0 | (ch >> 6);         // 前两位标记字节
+            *out_ptr++ = 0x80 | (ch & 0x3F);       // 后六位数据字节
+        }
+    }
+    *out_ptr = '\0';  // null-terminated
+
+    return output;
+}
+
 
 AVFrame *initAVFrame(AVCodecContext *pCodecCtx, uint8_t **frameBuffer)
 {
@@ -48,9 +84,11 @@ static char *dump_metadata(void *ctx, AVDictionary *m, const char *indent, const
     char *info = def;
     AVDictionaryEntry *tag = NULL;
     AVDictionaryEntry *result = av_dict_get(m, indent, NULL, 0);
+    
     printf("遍历到的内容%s,值是%s\n", indent, result->value);
     if (result->value) {
-        return result->value;
+        return iso8859_1_to_utf8(result->value);
+        // return result->value;
     }
     return info;
 }
@@ -554,6 +592,7 @@ ImageData **captureByMs(char *ms, char *path, int id)
     avformat_close_input(&pFormatCtx);
     return dataList;
 }
+
 // 获取视频的元数据
 char *getMetaDataByKey(const char *key, const char *path) {
     AVFormatContext *pFormatCtx = avformat_alloc_context();
@@ -573,6 +612,7 @@ char *getMetaDataByKey(const char *key, const char *path) {
     }
 
     const char *value = dump_metadata(NULL, pFormatCtx->metadata, key, "");
+    printf("===>得到的value: %s\n", value);
     avformat_free_context(pFormatCtx);
 
     if (!value) {
@@ -581,8 +621,20 @@ char *getMetaDataByKey(const char *key, const char *path) {
     }
 
     // 创建一个字符串副本，因为原始值可能随 pFormatCtx 释放而失效
-    char *result = strdup(value);
-    return result;
+    // char *result = strdup(value);
+    return value;
+}
+size_t get_string_length(int ptr) {
+    if (ptr == 0) {
+        printf("Received null pointer\n");
+        return 0;  // 检查空指针
+    }
+    char* str = (char*) ptr;  // 将整数地址转换为字符指针
+    printf("Received non-null pointer, pointing to: %s\n", str);  // 打印指针指向的字符串
+
+    size_t length = strlen(str);  // 使用 strlen 获取字符串长度
+    printf("String length: %zu\n", length);
+    return length;
 }
 int main(int argc, char const *argv[])
 {
