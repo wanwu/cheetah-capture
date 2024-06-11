@@ -1,8 +1,7 @@
-import typescript from '@rollup/plugin-typescript';
-import babel from '@rollup/plugin-babel';
-import replace from '@rollup/plugin-replace';
+const typescript = require('@rollup/plugin-typescript');
+const babel = require('@rollup/plugin-babel');
 
-export default {
+module.exports = {
     input: ['src/index.ts', 'src/capture.worker.ts'], // 源文件入口
     output: [
         {

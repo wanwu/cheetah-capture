@@ -13,10 +13,12 @@ TOTAL_MEMORY=33554432
 source $WEB_CAPTURE_PATH/emsdk/emsdk_env.sh
 
 npm run webpack-capture
+npm run build-capture
+
 emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH/lib/libavcodec.a $FFMPEG_PATH/lib/libswscale.a $FFMPEG_PATH/lib/libavutil.a \
     -O0 \
     -lworkerfs.js \
-    --pre-js $WEB_CAPTURE_PATH/dist/capture.worker.js \
+    --pre-js $WEB_CAPTURE_PATH/dist/es/capture.worker.js \
     -I "$FFMPEG_PATH/include" \
     -s WASM=1 \
     -s TOTAL_MEMORY=$TOTAL_MEMORY \
@@ -24,8 +26,8 @@ emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH
     -s EXPORTED_FUNCTIONS='["_main", "_free", "_captureByMs", "_captureByCount", "_getMetaDataByKey"]' \
     -s ASSERTIONS=0 \
     -s ALLOW_MEMORY_GROWTH=1 \
-    -o $WEB_CAPTURE_PATH/dist/capture.worker.js
+    -o $WEB_CAPTURE_PATH/dist/es/capture.worker.js
 
-npx babel $WEB_CAPTURE_PATH/dist/capture.worker.js --out-file $WEB_CAPTURE_PATH/dist/capture.worker.js
+npx babel $WEB_CAPTURE_PATH/dist/es/capture.worker.js --out-file $WEB_CAPTURE_PATH/dist/capture.worker.js
 
 echo "===== finish build wasm ====="
