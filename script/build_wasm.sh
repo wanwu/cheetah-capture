@@ -26,4 +26,6 @@ emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH
     -s ALLOW_MEMORY_GROWTH=1 \
     -o $WEB_CAPTURE_PATH/dist/capture.worker.js
 
+npx babel $WEB_CAPTURE_PATH/dist/capture.worker.js --out-file $WEB_CAPTURE_PATH/dist/capture.worker.js
+
 echo "===== finish build wasm ====="
