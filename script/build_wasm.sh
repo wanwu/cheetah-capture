@@ -29,5 +29,6 @@ emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH
     -o $WEB_CAPTURE_PATH/dist/es/capture.worker.js
 
 npx babel $WEB_CAPTURE_PATH/dist/es/capture.worker.js --out-file $WEB_CAPTURE_PATH/dist/capture.worker.js
+cp $WEB_CAPTURE_PATH/dist/es/capture.worker.wasm $WEB_CAPTURE_PATH/dist/capture.worker.wasm
 
 echo "===== finish build wasm ====="
