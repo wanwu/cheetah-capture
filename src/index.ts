@@ -231,7 +231,7 @@ export async function initCapture({
             }
             case Events.receiveImageOnSuccess: {
                 const {id, meta} = e.data || {};
-                const cbk = pool.getCbk(id);
+                const cbk = pool.getCbk(id) || {};
                 const {onSuccess} = cbk;
                 const {cache} = pool.getCbk(id);
                 onSuccess && onSuccess({
@@ -242,14 +242,14 @@ export async function initCapture({
             }
             case Events.receiveError: {
                 const {errmsg, id} = e.data || {};
-                const cbk = pool.getCbk(id);
+                const cbk = pool.getCbk(id) || {};
                 const {onError} = cbk;
                 onError && onError(errmsg);
                 break;
             }
             case Events.getMetadataOnSuccess: {
                 const {id, meta} = e.data || {};
-                const cbk = pool.getCbk(id);
+                const cbk = pool.getCbk(id) || {};
                 const {onSuccess} = cbk;
                 onSuccess && onSuccess({meta: meta as string});
                 break;

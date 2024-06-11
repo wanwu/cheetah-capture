@@ -191,43 +191,17 @@ class ImageCapture {
     }
 
     getMetadata(key: string, id: number) {
-        // getMetadata(key, path, id)
         if (!this.name) {
             throw new Error('Please mount file first!');
         }
         const cGetMetadata = Module.cwrap('getMetaDataByKey', 'string', ['string', 'string', 'number']);
         const metadataValue = cGetMetadata(key, `${this.path}/${this.name}`, id);
-        // cGetMetadata();
 
         self.postMessage({
             type: Events.getMetadataOnSuccess,
             meta: metadataValue,
             id,
         });
-        // // cGetMetadata();
-        // const ptr = Module.ccall('getMetaDataByKey', 'number', ['string', 'string', 'number'], [key, `${this.path}/${this.name}`, id]);
-        // if (!ptr) {
-        //     console.error('Invalid pointer received');
-        // } else {
-        //     console.log('===>ptr', ptr);
-        //     const length = Module.ccall('get_string_length', 'number', ['number'], [ptr]);
-        //     console.log('===>length', length);
-        //     if (length > 0) {
-        //         const data = new Uint8Array(Module.HEAPU8.buffer, ptr, length);
-        //         const decoder = new TextDecoder('utf-8');
-        //         const metadataValue = decoder.decode(data);
-        //         console.log('==>from worker', metadataValue);
-        //         self.postMessage({
-        //             type: Events.getMetadataOnSuccess,
-        //             meta: metadataValue,
-        //             id,
-        //         });
-        //     } else {
-        //         console.error('Received empty or invalid length');
-        //     }
-        // }
-
-
     }
 }
 

@@ -9,18 +9,16 @@
 
 <body>
 
-    <input id="js_file" type="file">
+    <input id="js_file" type="file" multiple>
 
-    <input id="js_time" type="number" value="1" placeholder="画面时间s">
+    <input id="js_time" type="number" value="5" placeholder="画面时间s">
 
     <button id="js_button">提取</button>
-
 
     <div id="js_info"></div>
 
     <div id="js_result"></div>
 
-    <!-- <script src="./capture.js" type="application/javascript"></script> -->
     <script src="../dist/index.js" type="application/javascript"></script>
     <script>
         const workerPath = new URL(location.origin + '/dist/capture.worker.js');
@@ -28,48 +26,55 @@
         let button = document.querySelector('#js_button');
         let resultContainer = document.querySelector('#js_result');
         let fileInput = document.querySelector('#js_file');
-        let timeInput = document.querySelector('#js_time');
         let infoContainer = document.querySelector('#js_info');
+        let timeInput = document.querySelector('#js_time');
+        const captureTimes = parseInt(timeInput.value, 10);
 
         const capturePro = cheetahCapture.initCapture({
             workerPath,
             wasmPath,
         });
-        button.addEventListener('click', async () => {
-            let file = fileInput.files[0];
-            console.log('===>file', file);
-            let startTime = Date.now();
-            capturePro.then((res) => {
-                res.mountFile({
-                    file,
-                    onSuccess: () => {
-                        console.log('===>mountFile success');
-                        res.getMetadata({
-                            info: 'aigc',
-                            onSuccess: (data) => {
-                                console.log('===>getMetadata', data);
-                            }
-                        });
-                        res.capture({
-                            file,
-                            info: 11,
-                            onChange: (list = {}, now = {}, info = {}) => {
-                                console.log('==>onchange', list, now, info);
-                                const { width, height, duration } = info;
-                                const img = document.createElement('img');
-                                img.src = now.url;
-                                resultContainer.append(img);
 
-                                infoContainer.innerHTML = `耗时：${Date.now() - startTime}ms<br>宽度：${width}<br>高度：${height}<br>时长：${duration}s`;
-                            },
-                            onSuccess: (list) => {
-                                console.log('==>onSuccess', list);
-                                res.free({onSuccess: () => {console.log('===free success')}});
-                            }
-                        })
-                    }
-                })
-            })
+        button.addEventListener('click', async () => {
+            const files = fileInput.files;
+            for (let i = 0; i < files.length; i++) {
+                let file = files[i];
+                let startTime = Date.now();
+                const res = await capturePro;
+                await new Promise((resolve, reject) => {
+                    res.mountFile({
+                        file,
+                        onSuccess: () => {
+                            console.log('===>mountFile success', i);
+                            res.capture({
+                                info: captureTimes,
+                                onChange: (list = {}, now = {}, info = {}) => {
+                                    console.log('==>onchange', list, now, info);
+                                    const { width, height, duration } = info;
+                                    const img = document.createElement('img');
+                                    img.src = now.url;
+                                    resultContainer.append(img);
+
+                                    infoContainer.innerHTML = `耗时：${Date.now() - startTime}ms<br>宽度：${width}<br>高度：${height}<br>时长：${duration}s`;
+                                },
+                                onSuccess: (list) => {
+                                    console.log('==>onSuccess', list);
+                                    res.free({
+                                        onSuccess: () => {
+                                            console.log('===free success');
+                                            resolve();
+                                        }
+                                    });
+                                }
+                            });
+                        },
+                        onError: (error) => {
+                            console.error('Error mounting file:', error);
+                            reject(error);
+                        }
+                    });
+                });
+            }
         });
     </script>
 </body>
