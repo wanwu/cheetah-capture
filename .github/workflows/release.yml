@@ -5,14 +5,14 @@ on:
 
 jobs:
   publish:
-    runs-on: macos-12
+    runs-on: macos-latest
     permissions:
       contents: read
       packages: write
     steps:
       - name: Download Artifact
         id: download-artifact
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v4
         with:
           name: output
           search_artifacts: true
