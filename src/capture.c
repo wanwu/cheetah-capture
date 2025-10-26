@@ -376,7 +376,7 @@ ImageData **captureByCount(int count, char *path, int id)
     // 第一帧的数据 立即抽出来
     // TODO: 穿出去的数据应该加一个当前数据idx 可以选择在前端排序
     FrameInfo *frameInfo;
-    frameInfo =  (struct FrameInfo *)malloc(sizeof(FrameInfo));
+    frameInfo = (FrameInfo *)malloc(sizeof(FrameInfo));
     // 初始化结构体
     frameInfo->lastKeyframe = 0;
     frameInfo->lastIframe = -1;
@@ -483,7 +483,8 @@ ImageData **captureByCount(int count, char *path, int id)
     av_free(pCodec);
     avcodec_close(pCodecCtx);
     avformat_close_input(&pFormatCtx);
-    return dataList;
+    // dataList 已通过 transpostFrame 传递，这里返回 NULL
+    return NULL;
 }
 // 传入毫秒截取指定位置视频画面
 ImageData **captureByMs(char *ms, char *path, int id)
@@ -550,7 +551,7 @@ ImageData **captureByMs(char *ms, char *path, int id)
     ImageData *dataList = (ImageData *)malloc(sizeof(ImageData) * len);
     int idx = 0;
     FrameInfo *frameInfo;
-    frameInfo =  (struct FrameInfo *)malloc(sizeof(FrameInfo));
+    frameInfo = (FrameInfo *)malloc(sizeof(FrameInfo));
     // 初始化结构体
     frameInfo->lastKeyframe = 0;
     frameInfo->lastIframe = -1;
@@ -590,7 +591,8 @@ ImageData **captureByMs(char *ms, char *path, int id)
     avcodec_close(pCodecCtx);
 
     avformat_close_input(&pFormatCtx);
-    return dataList;
+    // dataList 已通过 transpostFrame 传递，这里返回 NULL
+    return NULL;
 }
 
 // 获取视频的元数据
@@ -623,6 +625,42 @@ char *getMetaDataByKey(const char *key, const char *path) {
     // 创建一个字符串副本，因为原始值可能随 pFormatCtx 释放而失效
     // char *result = strdup(value);
     return value;
+}
+
+// 检测视频是否存在音轨
+int hasAudioTrack(const char *path) {
+    AVFormatContext *pFormatCtx = avformat_alloc_context();
+    if (!pFormatCtx) {
+        fprintf(stderr, "Could not allocate AVFormatContext.\n");
+        return -1;
+    }
+
+    // 打开视频文件
+    if (avformat_open_input(&pFormatCtx, path, NULL, NULL) < 0) {
+        fprintf(stderr, "avformat_open_input failed\n");
+        return -1;
+    }
+
+    // 获取流信息
+    if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
+        fprintf(stderr, "avformat_find_stream_info failed\n");
+        avformat_close_input(&pFormatCtx);
+        return -1;
+    }
+
+    // 遍历所有流，查找音频流
+    int hasAudio = 0;
+    for (int i = 0; i < pFormatCtx->nb_streams; i++) {
+        if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            hasAudio = 1;
+            printf("Found audio stream at index %d\n", i);
+            break;
+        }
+    }
+
+    avformat_close_input(&pFormatCtx);
+    
+    return hasAudio;
 }
 size_t get_string_length(int ptr) {
     if (ptr == 0) {

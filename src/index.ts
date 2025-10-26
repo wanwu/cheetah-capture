@@ -18,6 +18,10 @@ async function initWorker(url: URL|string, wasmPath: URL|string): Promise<Worker
     });
     const promise = new Promise<Worker>(resolve => {
         captureWorker && captureWorker.addEventListener('message', e => {
+            // // 转发 Worker 的日志到主线程控制台
+            // if (e?.data?.type === 'workerLog') {
+            //     console.log(e.data.message);
+            // }
             if (e?.data?.type === 'init') {
                 // wasm初始化完毕
                 resolve(captureWorker);
@@ -48,19 +52,24 @@ interface MapInfoType extends CallbackType{
 interface CaptureInfo extends CallbackType{
     info?: number[] | number | string;
     path?: string;
-    file: File | Blob;
+    file?: File | Blob;
     returnType?: 'blob' | 'base64'; // 默认blob
+}
+
+interface HasAudioTrackCallback {
+    onSuccess?: (hasAudio: boolean) => void;
+    onError?: (errmeg: string) => void;
 }
 function createRequest() {
     let currentId = 0;
-    const map: Map<number, CallbackType & {cache?: MapInfoType}> = new Map();
+    const map: Map<number, any> = new Map();
     return {
         // 获取视频唯一id
-        setCallback(item: CallbackType) {
+        setCallback(item: any) {
             const id = ++currentId;
             map.set(currentId, {
                 ...item,
-                cache: {},
+                cache: item.cache || {},
             });
             return id;
         },
@@ -172,8 +181,9 @@ class Capture {
         startCapture(id, info, path, this.file);
     }
 
-    mountFile(data: CaptureInfo) {
-        const {file, path, info, ...func} = data;
+    mountFile(data: {file: File | Blob, path?: string, onSuccess?: () => void, onError?: (errmeg: string) => void}) {
+        // const {file, path = '/working', ...func} = data;
+        const {file, path, ...func} = data;
         this.file = file;
         this.path = path;
         const id = pool.setCallback(func);
@@ -182,6 +192,18 @@ class Capture {
             id,
             path,
             file,
+        });
+    }
+
+    hasAudioTrack(callback: HasAudioTrackCallback) {
+        if (!this.file) {
+            callback.onError && callback.onError('Please mount file first!');
+            return;
+        }
+        const id = pool.setCallback(callback);
+        workerPost({
+            type: Events.hasAudioTrack,
+            id,
         });
     }
 
@@ -257,15 +279,25 @@ export async function initCapture({
             case Events.mountFileSuccess: {
                 const {id} = e.data || {};
                 const cbk = pool.getCbk(id);
-                const {onSuccess} = cbk;
-                onSuccess && onSuccess();
+                if (cbk && cbk.onSuccess) {
+                    cbk.onSuccess();
+                }
                 break;
             }
             case Events.freeOnSuccess: {
                 const {id} = e.data || {};
                 const cbk = pool.getCbk(id);
+                if (cbk && cbk.onSuccess) {
+                    cbk.onSuccess();
+                }
+                pool.deleteCbk(id);
+                break;
+            }
+            case Events.hasAudioTrackOnSuccess: {
+                const {id, hasAudio} = e.data || {};
+                const cbk = pool.getCbk(id);
                 const {onSuccess} = cbk;
-                onSuccess && onSuccess();
+                onSuccess && onSuccess(hasAudio);
                 pool.deleteCbk(id);
                 break;
             }
