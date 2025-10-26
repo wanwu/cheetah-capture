@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   build-job:
     name: build-job
-    runs-on: macos-12
+    runs-on: macos-latest
     strategy:
       matrix:
         node-version: [16.x]
@@ -27,7 +27,7 @@ jobs:
         run: bash script/build.sh
 
       - name: Upload output file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
 
         with:
           name: output
