@@ -15,6 +15,9 @@ source $WEB_CAPTURE_PATH/emsdk/emsdk_env.sh
 npm run webpack-capture
 npm run build-capture
 
+# 备份TypeScript编译的worker代码到临时文件
+# cp $WEB_CAPTURE_PATH/dist/es/capture.worker.js $WEB_CAPTURE_PATH/dist/es/capture.worker.pre.js
+
 emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH/lib/libavcodec.a $FFMPEG_PATH/lib/libswscale.a $FFMPEG_PATH/lib/libavutil.a \
     -O0 \
     -lworkerfs.js \
@@ -23,7 +26,7 @@ emcc $WEB_CAPTURE_PATH/src/capture.c $FFMPEG_PATH/lib/libavformat.a $FFMPEG_PATH
     -s WASM=1 \
     -s TOTAL_MEMORY=$TOTAL_MEMORY \
     -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-    -s EXPORTED_FUNCTIONS='["_main", "_free", "_captureByMs", "_captureByCount", "_getMetaDataByKey"]' \
+    -s EXPORTED_FUNCTIONS='["_main", "_free", "_captureByMs", "_captureByCount", "_getMetaDataByKey", "_hasAudioTrack"]' \
     -s ASSERTIONS=0 \
     -s ALLOW_MEMORY_GROWTH=1 \
     -o $WEB_CAPTURE_PATH/dist/es/capture.worker.js

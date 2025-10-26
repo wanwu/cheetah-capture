@@ -203,6 +203,20 @@ class ImageCapture {
             id,
         });
     }
+
+    hasAudioTrack(id: number) {
+        if (!this.name) {
+            throw new Error('Please mount file first!');
+        }
+        const cHasAudioTrack = Module.cwrap('hasAudioTrack', 'number', ['string']);
+        const hasAudio = cHasAudioTrack(`${this.path}/${this.name}`);
+
+        self.postMessage({
+            type: Events.hasAudioTrackOnSuccess,
+            hasAudio: hasAudio === 1,
+            id,
+        });
+    }
 }
 
 // importScripts('./capture.js');
@@ -219,7 +233,9 @@ self.addEventListener('message', e => {
         path,
         file,
     } = e.data;
+    // workerLog('[Worker] 收到消息:', type);
     if (type === 'initPath') {
+        // workerLog('[Worker] 初始化路径:', info);
         (self as any).goOnInit(info);
     }
 
@@ -239,6 +255,10 @@ self.addEventListener('message', e => {
 
     if (type === Events.getMetadata) {
         imageCapture.getMetadata(info, id);
+    }
+
+    if (type === Events.hasAudioTrack) {
+        imageCapture.hasAudioTrack(id);
     }
 
     if (type === Events.free) {
@@ -276,10 +296,25 @@ function setAngle(a: string, id: number) {
 function setDescription(a: string, id: number) {
     metaDataMap[id].description = a;
 }
+// @ts-ignore
 self.transpostFrame = transpostFrame;
+// @ts-ignore
 self.setAngle = setAngle;
+// @ts-ignore
 self.setDescription = setDescription;
+// 辅助函数：同时发送到 console 和主线程
+// function workerLog(message: string, ...args: any[]) {
+//     console.log(message, ...args);
+//     self.postMessage({
+//         type: 'workerLog',
+//         message: message + (args.length > 0 ? ' ' + args.join(' ') : ''),
+//     });
+// }
+
+// workerLog('[Worker] 🚀 Worker 脚本开始执行');
+
 const initPromise: Promise<URL> = new Promise(res => {
+    // workerLog('[Worker] ⏳ 创建 initPromise');
     (self as any).goOnInit = res;
 });
 

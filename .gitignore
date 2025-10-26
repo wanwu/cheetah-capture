@@ -5,3 +5,5 @@ script/ffmpeg-3.4.8
 emsdk
 dist
 .DS_Store
+output/
+types/

@@ -9,4 +9,6 @@ export const Events = {
     receiveError: 'receiveError',
     free: 'free',
     freeOnSuccess: 'freeOnSuccess',
+    hasAudioTrack: 'hasAudioTrack',
+    hasAudioTrackOnSuccess: 'hasAudioTrackOnSuccess',
 };

@@ -16,6 +16,8 @@ git clone https://github.com/emscripten-core/emsdk.git
 
 cd emsdk
   git pull
+  # lock emcc版本
+  git checkout 3d6d8ee910466516a53e665b86458faa81dae9ba
   # Download and install the latest SDK tools.
   ./emsdk install latest
   # Make the "latest" SDK "active" for the current user. (writes .emscripten file)

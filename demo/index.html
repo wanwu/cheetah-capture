@@ -1,79 +1,562 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>wasm截帧sdk测试demo</title>
+    <title>Cheetah Capture - 视频截帧和音轨检测工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .control-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 12px 20px;
+            background: white;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .file-input-label:hover {
+            background: #f0f4ff;
+            border-color: #5568d3;
+        }
+
+        .file-input-label.has-file {
+            border-style: solid;
+            background: #f0f4ff;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #js_button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #js_button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        #js_audio_check {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        #js_audio_check:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            min-height: 50px;
+        }
+
+        .info-panel:empty::before {
+            content: '等待操作...';
+            color: #999;
+        }
+
+        .supported-formats {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff3cd;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #856404;
+        }
+
+        .result-container {
+            margin-top: 20px;
+        }
+
+        .result-container h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .image-grid img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .image-grid img:hover {
+            transform: scale(1.05);
+        }
+
+        .success-text {
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .error-text {
+            color: #dc3545;
+            font-weight: 500;
+        }
+
+        .warning-text {
+            color: #ffc107;
+            font-weight: 500;
+        }
+    </style>
 </head>
 
 <body>
+    <div class="container">
+        <h1>🎬 Cheetah Capture</h1>
+        <p class="subtitle">视频截帧和音轨检测工具</p>
 
-    <input id="js_file" type="file" multiple>
+        <div class="control-panel">
+            <div class="form-group">
+                <label for="js_file">选择视频文件</label>
+                <div class="file-input-wrapper">
+                    <input 
+                        id="js_file" 
+                        type="file" 
+                        accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska,video/x-flv,video/x-ms-wmv,.mp4,.mov,.avi,.webm,.mkv,.flv,.wmv,.m4v,.3gp,.mpg,.mpeg" 
+                        multiple>
+                    <label for="js_file" class="file-input-label" id="js_file_label">
+                        📁 点击选择视频文件（支持多选）
+                    </label>
+                </div>
+                <div class="supported-formats">
+                    <strong>支持的格式：</strong>MP4, MOV, AVI, WebM, MKV, FLV, WMV, M4V, 3GP, MPG, MPEG
+                </div>
+            </div>
 
-    <input id="js_time" type="number" value="5" placeholder="画面时间s">
+            <div class="form-group">
+                <label for="js_time">截取帧数</label>
+                <input id="js_time" type="number" value="5" min="1" max="50" placeholder="输入要截取的帧数（1-50）">
+            </div>
 
-    <button id="js_button">提取</button>
+            <div class="button-group">
+                <button id="js_button" disabled>🎞️ 提取视频帧</button>
+                <button id="js_audio_check" disabled>🔊 检测音轨</button>
+            </div>
+        </div>
 
-    <div id="js_info"></div>
+        <div class="info-panel" id="js_info"></div>
 
-    <div id="js_result"></div>
+        <div class="info-panel" id="js_audio_info"></div>
+
+        <div class="result-container" id="js_result_container" style="display: none;">
+            <h3>截取结果</h3>
+            <div class="image-grid" id="js_result"></div>
+        </div>
+    </div>
 
     <script src="../dist/index.js" type="application/javascript"></script>
     <script>
-        const workerPath = new URL(location.origin + '/dist/capture.worker.js');
-        const wasmPath = new URL(location.origin + '/dist/capture.worker.wasm');
-        let button = document.querySelector('#js_button');
-        let resultContainer = document.querySelector('#js_result');
-        let fileInput = document.querySelector('#js_file');
-        let infoContainer = document.querySelector('#js_info');
-        let timeInput = document.querySelector('#js_time');
-        const captureTimes = parseInt(timeInput.value, 10);
+        // 智能路径配置 - 兼容不同的启动方式
+        const currentPath = window.location.pathname;
+        const isInDemo = currentPath.includes('/demo/');
+        
+        // 如果在 demo 目录下，使用相对路径；否则使用绝对路径
+        // 添加时间戳防止浏览器缓存
+        const timestamp = Date.now();
+        const workerPath = (isInDemo ? '../dist/capture.worker.js' : '/dist/capture.worker.js') + '?v=' + timestamp;
+        const wasmPath = (isInDemo ? '../dist/capture.worker.wasm' : '/dist/capture.worker.wasm') + '?v=' + timestamp;
+        
+        // DOM 元素
+        const button = document.querySelector('#js_button');
+        const audioCheckButton = document.querySelector('#js_audio_check');
+        const resultContainer = document.querySelector('#js_result');
+        const resultContainerWrapper = document.querySelector('#js_result_container');
+        const fileInput = document.querySelector('#js_file');
+        const fileLabel = document.querySelector('#js_file_label');
+        const infoContainer = document.querySelector('#js_info');
+        const audioInfoContainer = document.querySelector('#js_audio_info');
+        const timeInput = document.querySelector('#js_time');
 
+        // 初始化 Cheetah Capture - 添加错误处理
+        console.log('开始初始化 Cheetah Capture...');
+        console.log('当前页面路径:', currentPath);
+        console.log('是否在 demo 目录:', isInDemo);
+        console.log('Worker 路径:', workerPath);
+        console.log('WASM 路径:', wasmPath);
+        console.log('完整 Worker URL:', new URL(workerPath, window.location.href).href);
+        console.log('完整 WASM URL:', new URL(wasmPath, window.location.href).href);
+        
+        // 显示初始化状态
+        infoContainer.innerHTML = '⏳ 正在初始化 WASM 模块，请稍候...';
+        
+        let captureInstance = null;
+        let isReady = false;
+        
         const capturePro = cheetahCapture.initCapture({
             workerPath,
             wasmPath,
+        }).then(instance => {
+            console.log('✅ Cheetah Capture 初始化成功');
+            captureInstance = instance;
+            isReady = true;
+            infoContainer.innerHTML = '<span class="success-text">✅ 初始化完成，可以开始使用</span>';
+            return instance;
+        }).catch(error => {
+            console.error('❌ Cheetah Capture 初始化失败:', error);
+            infoContainer.innerHTML = '<span class="error-text">❌ 初始化失败: ' + error.message + '</span>';
+            // 禁用按钮
+            button.disabled = true;
+            audioCheckButton.disabled = true;
+            throw error;
         });
 
-        button.addEventListener('click', async () => {
+        // 文件选择监听
+        fileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length > 0) {
+                // 更新文件标签显示
+                const fileNames = Array.from(files).map(f => f.name).join(', ');
+                fileLabel.innerHTML = `✅ 已选择 ${files.length} 个文件：<br><small>${fileNames.length > 100 ? fileNames.substring(0, 100) + '...' : fileNames}</small>`;
+                fileLabel.classList.add('has-file');
+                
+                // 启用按钮
+                button.disabled = false;
+                audioCheckButton.disabled = false;
+                
+                // 清空之前的结果
+                infoContainer.innerHTML = '';
+                audioInfoContainer.innerHTML = '';
+            } else {
+                fileLabel.innerHTML = '📁 点击选择视频文件（支持多选）';
+                fileLabel.classList.remove('has-file');
+                button.disabled = true;
+                audioCheckButton.disabled = true;
+            }
+        });
+
+        // 音轨检测功能
+        audioCheckButton.addEventListener('click', async () => {
+            console.log('🔊 点击音轨检测按钮');
+            
+            // 检查初始化状态
+            if (!isReady) {
+                audioInfoContainer.innerHTML = '<span class="warning-text">⚠️ WASM 模块正在初始化中，请稍候...</span>';
+                console.log('⚠️ WASM 未就绪');
+                return;
+            }
+            
             const files = fileInput.files;
-            for (let i = 0; i < files.length; i++) {
-                let file = files[i];
-                let startTime = Date.now();
-                const res = await capturePro;
+            if (files.length === 0) {
+                audioInfoContainer.innerHTML = '<span class="warning-text">⚠️ 请先选择视频文件</span>';
+                return;
+            }
+            
+            // 禁用按钮防止重复点击
+            audioCheckButton.disabled = true;
+            button.disabled = true;
+            
+            audioInfoContainer.innerHTML = '🔍 正在检测音轨...';
+            const file = files[0];
+            console.log('准备检测文件:', file.name);
+            
+            let res;
+            try {
+                res = await capturePro;
+                console.log('✅ 获取到 capture 实例:', res);
+            } catch (error) {
+                console.error('❌ 获取 capture 实例失败:', error);
+                audioInfoContainer.innerHTML = '<span class="error-text">❌ 初始化失败，请刷新页面重试</span>';
+                audioCheckButton.disabled = false;
+                button.disabled = false;
+                return;
+            }
+            
+            try {
+                // 先挂载文件
+                console.log('开始挂载文件...');
                 await new Promise((resolve, reject) => {
+                    // 设置超时
+                    const timeout = setTimeout(() => {
+                        reject(new Error('挂载文件超时（30秒）'));
+                    }, 30000);
+                    
                     res.mountFile({
                         file,
                         onSuccess: () => {
-                            console.log('===>mountFile success', i);
-                            res.capture({
-                                info: captureTimes,
-                                onChange: (list = {}, now = {}, info = {}) => {
-                                    console.log('==>onchange', list, now, info);
-                                    const { width, height, duration } = info;
-                                    const img = document.createElement('img');
-                                    img.src = now.url;
-                                    resultContainer.append(img);
-
-                                    infoContainer.innerHTML = `耗时：${Date.now() - startTime}ms<br>宽度：${width}<br>高度：${height}<br>时长：${duration}s`;
-                                },
-                                onSuccess: (list) => {
-                                    console.log('==>onSuccess', list);
+                            clearTimeout(timeout);
+                            console.log('✅ 挂载文件成功，开始检测音轨');
+                            // 挂载成功后检测音轨
+                            res.hasAudioTrack({
+                                onSuccess: (hasAudio) => {
+                                    console.log('✅ 音轨检测结果:', hasAudio);
+                                    audioInfoContainer.innerHTML = hasAudio 
+                                        ? '<span class="success-text">✅ 该视频包含音轨</span>' 
+                                        : '<span class="warning-text">⚠️ 该视频不包含音轨（静音视频）</span>';
+                                    
+                                    // 检测完成后释放资源
                                     res.free({
                                         onSuccess: () => {
-                                            console.log('===free success');
+                                            console.log('✅ 资源释放成功');
                                             resolve();
                                         }
                                     });
+                                },
+                                onError: (error) => {
+                                    clearTimeout(timeout);
+                                    console.error('❌ 检测音轨失败:', error);
+                                    audioInfoContainer.innerHTML = '<span class="error-text">❌ 检测音轨失败: ' + error + '</span>';
+                                    reject(error);
                                 }
                             });
                         },
                         onError: (error) => {
-                            console.error('Error mounting file:', error);
+                            clearTimeout(timeout);
+                            console.error('❌ 挂载文件失败:', error);
+                            audioInfoContainer.innerHTML = '<span class="error-text">❌ 挂载文件失败: ' + error + '</span>';
                             reject(error);
                         }
                     });
                 });
+            } catch (error) {
+                console.error('❌ 音轨检测出错:', error);
+                audioInfoContainer.innerHTML = '<span class="error-text">❌ ' + error.message + '</span>';
+            } finally {
+                // 恢复按钮状态
+                audioCheckButton.disabled = false;
+                button.disabled = false;
+            }
+        });
+
+        button.addEventListener('click', async () => {
+            console.log('🎞️ 点击提取视频帧按钮');
+            
+            // 检查初始化状态
+            if (!isReady) {
+                infoContainer.innerHTML = '<span class="warning-text">⚠️ WASM 模块正在初始化中，请稍候...</span>';
+                console.log('⚠️ WASM 未就绪');
+                return;
+            }
+            
+            const files = fileInput.files;
+            if (files.length === 0) {
+                infoContainer.innerHTML = '<span class="warning-text">⚠️ 请先选择视频文件</span>';
+                return;
+            }
+            
+            const captureTimes = parseInt(timeInput.value, 10);
+            if (isNaN(captureTimes) || captureTimes < 1 || captureTimes > 50) {
+                infoContainer.innerHTML = '<span class="error-text">❌ 请输入有效的帧数（1-50）</span>';
+                return;
+            }
+            
+            console.log(`准备提取 ${files.length} 个文件，每个文件 ${captureTimes} 帧`);
+            
+            // 禁用按钮防止重复点击
+            button.disabled = true;
+            audioCheckButton.disabled = true;
+            
+            // 清空之前的结果
+            resultContainer.innerHTML = '';
+            resultContainerWrapper.style.display = 'block';
+            audioInfoContainer.innerHTML = '';
+            
+            let res;
+            try {
+                res = await capturePro;
+                console.log('✅ 获取到 capture 实例:', res);
+            } catch (error) {
+                console.error('❌ 获取 capture 实例失败:', error);
+                infoContainer.innerHTML = '<span class="error-text">❌ 初始化失败，请刷新页面重试</span>';
+                button.disabled = false;
+                audioCheckButton.disabled = false;
+                return;
+            }
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const startTime = Date.now();
+                
+                console.log(`📊 开始处理文件 ${i + 1}/${files.length}:`, file.name);
+                infoContainer.innerHTML = `📊 正在处理文件 ${i + 1}/${files.length}: <strong>${file.name}</strong><br>⏳ 挂载文件中...`;
+                
+                try {
+                    await new Promise((resolve, reject) => {
+                        // 设置超时
+                        const timeout = setTimeout(() => {
+                            reject(new Error('处理超时（60秒）'));
+                        }, 60000);
+                        
+                        // 使用改造后的 mountFile API，只传 file 参数
+                        console.log('开始挂载文件...');
+                        res.mountFile({
+                            file, // path 参数已经变成可选的，默认为 '/working'
+                            onSuccess: () => {
+                                clearTimeout(timeout);
+                                console.log('✅ 挂载文件成功，开始截帧');
+                                infoContainer.innerHTML = `📊 正在处理文件 ${i + 1}/${files.length}: <strong>${file.name}</strong><br>🎬 正在提取视频帧...`;
+                                
+                                let frameCount = 0;
+                                res.capture({
+                                    info: captureTimes,
+                                    onChange: (list = {}, now = {}, info = {}) => {
+                                        console.log(`✅ 收到第 ${frameCount + 1} 帧`);
+                                        const { width, height, duration } = info;
+                                        frameCount++;
+                                        
+                                        const img = document.createElement('img');
+                                        img.src = now.url;
+                                        img.title = `帧 ${frameCount}/${captureTimes} - ${file.name}`;
+                                        resultContainer.appendChild(img);
+
+                                        infoContainer.innerHTML = `
+                                            📊 正在处理文件 ${i + 1}/${files.length}: <strong>${file.name}</strong><br>
+                                            ⏱️ 耗时：${Date.now() - startTime}ms<br>
+                                            📐 尺寸：${width} × ${height}<br>
+                                            ⏲️ 时长：${duration.toFixed(2)}s<br>
+                                            🎞️ 进度：${frameCount}/${captureTimes} 帧
+                                        `;
+                                    },
+                                    onSuccess: (list) => {
+                                        console.log(`✅ 文件 ${i + 1} 截帧完成，共 ${frameCount} 帧`);
+                                        infoContainer.innerHTML = `
+                                            <span class="success-text">✅ 文件 ${i + 1}/${files.length} 处理完成: ${file.name}</span><br>
+                                            ⏱️ 总耗时：${Date.now() - startTime}ms<br>
+                                            🎞️ 已提取：${frameCount} 帧
+                                        `;
+                                        
+                                        res.free({
+                                            onSuccess: () => {
+                                                console.log('✅ 资源释放成功');
+                                                resolve();
+                                            }
+                                        });
+                                    },
+                                    onError: (error) => {
+                                        clearTimeout(timeout);
+                                        console.error('❌ 截帧失败:', error);
+                                        infoContainer.innerHTML = `<span class="error-text">❌ 截帧失败: ${error}</span>`;
+                                        reject(error);
+                                    }
+                                });
+                            },
+                            onError: (error) => {
+                                clearTimeout(timeout);
+                                console.error('❌ 挂载文件失败:', error);
+                                infoContainer.innerHTML = `<span class="error-text">❌ 挂载文件失败: ${error}</span>`;
+                                reject(error);
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.error('❌ 处理文件出错:', error);
+                    infoContainer.innerHTML = `<span class="error-text">❌ 处理文件失败: ${error.message}</span>`;
+                    break;
+                }
+            }
+            
+            // 所有文件处理完成后恢复按钮
+            button.disabled = false;
+            audioCheckButton.disabled = false;
+            
+            if (files.length > 1) {
+                infoContainer.innerHTML = `<span class="success-text">🎉 全部完成！共处理 ${files.length} 个文件</span>`;
             }
         });
     </script>
