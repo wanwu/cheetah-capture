@@ -99,11 +99,31 @@ class ImageCapture {
     }
     // 加载文件
     mountFile(file: File | Blob, MOUNT_DIR: string = this.path, id: number) {
-        // 防止重复mount dir
-        if (!this.isMKDIR) {
-            FS.mkdir(MOUNT_DIR);
-            this.isMKDIR = true;
+
+        // 如果已经有文件挂载，先释放
+        if (this.name && this.isMKDIR) {
+            console.log('[Worker] Cleaning up previous mount');
+            try {
+                FS.unmount(MOUNT_DIR);
+            } catch (e: any) {
+                console.warn('[Worker] Unmount before remount failed:', e?.message || e);
+            }
+            this.isMKDIR = false;
         }
+
+        // 创建目录（只在第一次创建）
+        if (!this.isMKDIR) {
+            try {
+                FS.mkdir(MOUNT_DIR);
+                this.isMKDIR = true;
+                console.log('[Worker] Directory created:', MOUNT_DIR);
+            } catch (e: any) {
+                // 目录可能已存在
+                console.warn('[Worker] mkdir warning:', e?.message || e);
+                this.isMKDIR = true; // 假设目录存在
+            }
+        }
+
         this.file = file;
         const data: {files?: File[], blobs?: Array<{name: string, data: Blob}>} = {};
         let name: string = '';
@@ -114,10 +134,17 @@ class ImageCapture {
         } else {
             name = `${id}.mp4`;
             data.blobs = [{name, data: file}];
-
         }
-        // @ts-ignore
-        FS.mount(WORKERFS, data, MOUNT_DIR);
+
+        try {
+            // @ts-ignore
+            FS.mount(WORKERFS, data, MOUNT_DIR);
+            console.log('[Worker] File mounted successfully:', name, 'to', MOUNT_DIR);
+        } catch (e: any) {
+            console.error('[Worker] Mount failed:', e?.message || e);
+            throw e;
+        }
+
         this.name = name;
         this.path = MOUNT_DIR;
         self.postMessage({
@@ -129,16 +156,33 @@ class ImageCapture {
     free({id}) {
         // 释放指针内存
         this.imgDataPtrList.forEach(ptr => {
-            Module._free(ptr);
+            try {
+                Module._free(ptr);
+            } catch (e) {
+                console.warn('Free pointer failed:', e);
+            }
         });
         this.imgDataPtrList = [];
         this.imgBufferPtrList.forEach(ptr => {
-            Module._free(ptr);
+            try {
+                Module._free(ptr);
+            } catch (e) {
+                console.warn('Free buffer pointer failed:', e);
+            }
         });
         this.imgBufferPtrList = [];
-        // 释放文件
-        FS.unmount(this.path);
+        // 释放文件系统挂载
+        if (this.name && this.path) {
+            try {
+                FS.unmount(this.path);
+                console.log('[Worker] Unmounted:', this.path);
+            } catch (e: any) {
+                // 忽略 unmount 错误（可能已经 unmount 或路径不存在）
+                console.warn('[Worker] Unmount warning:', e?.message || e);
+            }
+        }
         // 清除副作用
+        this.isMKDIR = false; // 重置目录创建标志
         this.name = '';
         this.file = null;
         this.path = '/working';
@@ -149,6 +193,10 @@ class ImageCapture {
     }
     capture({id, info, path = this.path, file = this.file}) {
         let isOnce = false;
+        // 如果 path 为 null 或 undefined，使用默认值
+        if (!path) {
+            path = '/working';
+        }
         this.path = path;
         try {
             if (!this.name) {
@@ -157,23 +205,29 @@ class ImageCapture {
             }
             let retData = 0;
             this.imageList[id] = [];
+            const filePath = `${path}/${this.name}`;
+            console.log('[Worker] Capturing from:', filePath, 'info:', info);
+
             if (info instanceof Array) {
                 // 说明是按照时间抽
                 this.captureInfo[id] = info.length;
                 if (!this.cCaptureByMs) {
                     this.cCaptureByMs = Module.cwrap('captureByMs', 'number', ['string', 'string', 'number']);
                 }
-                retData = this.cCaptureByMs(info.join(','), `${path}/${this.name}`, id);
+                retData = this.cCaptureByMs(info.join(','), filePath, id);
             } else {
                 this.captureInfo[id] = info;
                 if (!this.cCaptureByCount) {
                     this.cCaptureByCount = Module.cwrap('captureByCount', 'number', ['number', 'string', 'number']);
                 }
-                retData = this.cCaptureByCount(info, `${path}/${this.name}`, id);
+                // captureByCount 返回 1=成功, 0=失败
+                retData = this.cCaptureByCount(info, filePath, id);
+                console.log('[Worker] captureByCount result:', retData);
                 // 完善信息 这里需要一种模式 是否只一次性postmsg 不一张张读取
                 if (retData === 0) {
+                    console.error('[Worker] captureByCount failed! path:', filePath);
                     this.free({id});
-                    throw new Error('Frame draw exception!');
+                    throw new Error('Failed to capture frames: C function returned error');
                 }
             }
             if (isOnce) {

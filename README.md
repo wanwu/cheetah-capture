@@ -40,6 +40,12 @@
 | info  | string |  要获取的元数据的key | y |
 | onSuccess  | (args: {meta: string}) => void  | 读取成功的回调，无论是否有该key都会执行，没有返回的空字符串  | n |
 
+`hasAudioTrack: (args)=> void` 检测视频是否包含音轨，需要先调用 `mountFile` 挂载文件，具体args参数如下
+|  参数   | 类型  |含义  | 是否必须  |
+|  ----  | ----  |----  |----  |
+| onSuccess  | (hasAudio: boolean) => void  | 检测成功的回调，参数为 true 表示包含音轨，false 表示不包含（静音视频）  | n |
+| onError  | (errmeg: string) => void | 检测失败的回调  | n |
+
 `free: (args)=> void` 释放文件占用的存储空间，接受参数如下，释放的是文件，目录文件夹不会被释放
 |  参数   | 类型  |含义  | 是否必须  |
 |  ----  | ----  |----  |----  |

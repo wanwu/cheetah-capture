@@ -182,8 +182,7 @@ class Capture {
     }
 
     mountFile(data: {file: File | Blob, path?: string, onSuccess?: () => void, onError?: (errmeg: string) => void}) {
-        // const {file, path = '/working', ...func} = data;
-        const {file, path, ...func} = data;
+        const {file, path = '/working', ...func} = data;
         this.file = file;
         this.path = path;
         const id = pool.setCallback(func);

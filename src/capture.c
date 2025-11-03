@@ -79,18 +79,29 @@ AVFrame *initAVFrame(AVCodecContext *pCodecCtx, uint8_t **frameBuffer)
 }
 
 
-static char *dump_metadata(void *ctx, AVDictionary *m, const char *indent, const char *def)
+// 返回的字符串是静态或动态分配的，调用者需要检查是否需要 free
+// 如果返回的指针等于传入的 def，则不需要 free；否则需要 free
+static const char *dump_metadata(void *ctx, AVDictionary *m, const char *indent, const char *def)
 {
-    char *info = def;
-    AVDictionaryEntry *tag = NULL;
+    if (!m) {
+        return def;  // 返回默认值，不需要 free
+    }
+    
     AVDictionaryEntry *result = av_dict_get(m, indent, NULL, 0);
     
-    printf("遍历到的内容%s,值是%s\n", indent, result->value);
-    if (result->value) {
-        return iso8859_1_to_utf8(result->value);
-        // return result->value;
+    // 先检查 result 是否为 NULL
+    if (!result) {
+        printf("未找到 metadata key: %s, 使用默认值: %s\n", indent, def);
+        return def;  // 返回默认值，不需要 free
     }
-    return info;
+    
+    // 再检查 result->value
+    if (result->value) {
+        printf("遍历到的内容 %s, 值是 %s\n", indent, result->value);
+        return iso8859_1_to_utf8(result->value);  // 返回 malloc 的内存，需要 free
+    }
+    
+    return def;  // 返回默认值，不需要 free
 }
 
 int getIframes(AVFormatContext *qFormatCtx, int videoStream, int timeStamp, int *framesList, int idx)
@@ -323,9 +334,15 @@ AVCodec *initDecoder(AVCodecContext *pCodecCtx, AVFormatContext *pFormatCtx)
     return avcodec_find_decoder(pCodecCtx->codec_id);
 }
 // count 是抽帧数目，关键帧数目不够补齐
-ImageData **captureByCount(int count, char *path, int id)
+// 返回值：1=成功，0=失败
+int captureByCount(int count, char *path, int id)
 {
     AVFormatContext *pFormatCtx = avformat_alloc_context();
+    if (!pFormatCtx)
+    {
+        fprintf(stderr, "Could not allocate AVFormatContext\n");
+        return 0;
+    }
     // printf("%d", res);
     AVCodec *pCodec = NULL;
     // AVCodecContext *≈=NULL;
@@ -333,58 +350,105 @@ ImageData **captureByCount(int count, char *path, int id)
     // 先获取全部的i帧 只需要第一次执行
     // 第一帧立即抽出 第一帧一定是I帧 时间0
     int videoStream = -1;
+    AVCodecContext *pNewCodecCtx = NULL;
+    ImageData *dataList = NULL;
+    FrameInfo *frameInfo = NULL;
+    
     // 初始化读取文件
     AVCodecContext *pCodecCtx = initFileAndGetInfo(pFormatCtx, path, pCodec, &videoStream);
-    char *description = dump_metadata(NULL, pFormatCtx->metadata, "description", "");
+    if (pCodecCtx == NULL)
+    {
+        fprintf(stderr, "initFileAndGetInfo failed\n");
+        avformat_close_input(&pFormatCtx);
+        return 0;
+    }
+    
+    const char *def_desc = "";
+    const char *description = dump_metadata(NULL, pFormatCtx->metadata, "description", def_desc);
     static char setDescription[1024];
     sprintf(setDescription, "setDescription(`%s`, %d)", description, id);
     emscripten_run_script(setDescription);
+    // 如果返回的不是默认值，需要释放内存
+    if (description != def_desc) {
+        free((void*)description);
+    }
+    
     pCodec = initDecoder(pCodecCtx, pFormatCtx);
     if (pCodec == NULL)
     {
         fprintf(stderr, "avcodec_find_decoder failed\n");
-        return NULL;
+        avformat_close_input(&pFormatCtx);
+        return 0;
     }
-    AVCodecContext *pNewCodecCtx = avcodec_alloc_context3(pCodec);
+    
+    pNewCodecCtx = avcodec_alloc_context3(pCodec);
     // pNewCodecCtx = pNewCodecCtx2;
+    if (!pNewCodecCtx)
+    {
+        fprintf(stderr, "Could not allocate AVCodecContext\n");
+        avformat_close_input(&pFormatCtx);
+        return 0;
+    }
+    
     if (avcodec_copy_context(pNewCodecCtx, pCodecCtx) != 0)
     {
         fprintf(stderr, "avcodec_copy_context failed\n");
-        return NULL;
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
+        return 0;
     }
 
     if (avcodec_open2(pNewCodecCtx, pCodec, NULL) < 0)
     {
         fprintf(stderr, "avcodec_open2 failed\n");
-        return NULL;
-    }
-
-    if (!pNewCodecCtx)
-    {
-        fprintf(stderr, "pNewCodecCtx is NULL\n");
-        return NULL;
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
+        return 0;
     }
 
     int duration = pFormatCtx->duration;
-
     if (duration == -1)
     {
         fprintf(stderr, "get duration failed\n");
-        return NULL;
+        avcodec_close(pNewCodecCtx);
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
+        return 0;
     }
-    ImageData *dataList = (ImageData *)malloc(sizeof(ImageData) * count);
-    // 第一帧的数据 立即抽出来
-    // TODO: 穿出去的数据应该加一个当前数据idx 可以选择在前端排序
-    FrameInfo *frameInfo;
+    
+    dataList = (ImageData *)malloc(sizeof(ImageData) * count);
+    if (!dataList)
+    {
+        fprintf(stderr, "Could not allocate dataList\n");
+        avcodec_close(pNewCodecCtx);
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
+        return 0;
+    }
+    
     frameInfo = (FrameInfo *)malloc(sizeof(FrameInfo));
+    if (!frameInfo)
+    {
+        fprintf(stderr, "Could not allocate frameInfo\n");
+        free(dataList);
+        avcodec_close(pNewCodecCtx);
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
+        return 0;
+    }
     // 初始化结构体
     frameInfo->lastKeyframe = 0;
     frameInfo->lastIframe = -1;
     AVStream *st = pFormatCtx->streams[videoStream];
-    char *rotate = dump_metadata(NULL, st->metadata, "rotate", "0");
+    const char *def_rotate = "0";
+    const char *rotate = dump_metadata(NULL, st->metadata, "rotate", def_rotate);
     static char setAngle[1024];
     sprintf(setAngle, "setAngle(%s, %d)", rotate, id);
     emscripten_run_script(setAngle);
+    // 如果返回的不是默认值，需要释放内存
+    if (rotate != def_rotate) {
+        free((void*)rotate);
+    }
     dataList[0] = *(getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id));
     // emscripten_run_script(get_js_code(dataList[0])); // 把第一帧传出去
     // TODO:
@@ -479,12 +543,16 @@ ImageData **captureByCount(int count, char *path, int id)
         videoStream, timeFrameList[idx], frameInfo, Iframe, iFrameCounts, id));
     }
 
+    // 清理资源
+    free(frameInfo);
+    free(dataList);
     avcodec_close(pNewCodecCtx);
-    av_free(pCodec);
-    avcodec_close(pCodecCtx);
+    avcodec_free_context(&pNewCodecCtx);
+    // 注意：pCodec 是从 avcodec_find_decoder 返回的，不需要也不应该释放
+    // 注意：pCodecCtx 是 pFormatCtx->streams[videoStream]->codec 的引用，会随 pFormatCtx 释放
     avformat_close_input(&pFormatCtx);
-    // dataList 已通过 transpostFrame 传递，这里返回 NULL
-    return NULL;
+    // dataList 已通过 transpostFrame 传递，返回 1 表示成功
+    return 1;
 }
 // 传入毫秒截取指定位置视频画面
 ImageData **captureByMs(char *ms, char *path, int id)
@@ -613,18 +681,29 @@ char *getMetaDataByKey(const char *key, const char *path) {
         return NULL;
     }
 
-    const char *value = dump_metadata(NULL, pFormatCtx->metadata, key, "");
+    const char *def_value = "";
+    const char *value = dump_metadata(NULL, pFormatCtx->metadata, key, def_value);
     printf("===>得到的value: %s\n", value);
+    
+    // 需要在释放 pFormatCtx 之前复制字符串
+    char *result = NULL;
+    if (value == def_value) {
+        // 如果是默认值，复制一份
+        result = strdup(def_value);
+    } else {
+        // 如果是 malloc 的内存，直接使用（但需要在释放 pFormatCtx 之前处理）
+        result = strdup(value);
+        free((void*)value);  // 释放 dump_metadata 返回的内存
+    }
+    
     avformat_free_context(pFormatCtx);
 
-    if (!value) {
-        fprintf(stderr, "Failed to get metadata value.\n");
+    if (!result) {
+        fprintf(stderr, "Failed to allocate memory for metadata value.\n");
         return NULL;
     }
 
-    // 创建一个字符串副本，因为原始值可能随 pFormatCtx 释放而失效
-    // char *result = strdup(value);
-    return value;
+    return result;
 }
 
 // 检测视频是否存在音轨
