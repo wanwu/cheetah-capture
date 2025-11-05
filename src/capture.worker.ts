@@ -262,14 +262,27 @@ class ImageCapture {
         if (!this.name) {
             throw new Error('Please mount file first!');
         }
-        const cHasAudioTrack = Module.cwrap('hasAudioTrack', 'number', ['string']);
-        const hasAudio = cHasAudioTrack(`${this.path}/${this.name}`);
+        try {
+            const cHasAudioTrack = Module.cwrap('hasAudioTrack', 'number', ['string']);
+            const hasAudio = cHasAudioTrack(`${this.path}/${this.name}`);
 
-        self.postMessage({
-            type: Events.hasAudioTrackOnSuccess,
-            hasAudio: hasAudio === 1,
-            id,
-        });
+            if (hasAudio === -1) {
+                throw new Error('Failed to open video file. The file may be corrupted or in an unsupported format.');
+            }
+
+            self.postMessage({
+                type: Events.hasAudioTrackOnSuccess,
+                hasAudio: hasAudio === 1,
+                id,
+            });
+        } catch (e) {
+            console.error('[Worker] hasAudioTrack error:', e);
+            self.postMessage({
+                type: 'receiveError',
+                errmsg: e.toString(),
+                id,
+            });
+        }
     }
 }
 

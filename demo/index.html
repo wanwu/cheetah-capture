@@ -383,7 +383,8 @@
                             clearTimeout(timeout);
                             console.log('✅ 挂载文件成功，开始检测音轨');
                             // 挂载成功后检测音轨
-                            res.hasAudioTrack({
+                            try {
+                                res.hasAudioTrack({
                                 onSuccess: (hasAudio) => {
                                     console.log('✅ 音轨检测结果:', hasAudio);
                                     audioInfoContainer.innerHTML = hasAudio 
@@ -405,6 +406,11 @@
                                     reject(error);
                                 }
                             });
+                            } catch (error) {
+                                console.error('❌ 检测音轨出错:', error);
+                                audioInfoContainer.innerHTML = '<span class="error-text">❌ 检测音轨失败: ' + error + '</span>';
+                                reject(error);
+                            }
                         },
                         onError: (error) => {
                             clearTimeout(timeout);
