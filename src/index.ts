@@ -295,8 +295,9 @@ export async function initCapture({
             case Events.hasAudioTrackOnSuccess: {
                 const {id, hasAudio} = e.data || {};
                 const cbk = pool.getCbk(id);
-                const {onSuccess} = cbk;
-                onSuccess && onSuccess(hasAudio);
+                if (cbk && cbk.onSuccess) {
+                    cbk.onSuccess(hasAudio);
+                }
                 pool.deleteCbk(id);
                 break;
             }
