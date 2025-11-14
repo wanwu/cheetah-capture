@@ -1,8 +1,11 @@
 # cheetah-capture
 
+[English](./README_EN.md) | 简体中文
+
 <div>
-<img src="http://bj.bcebos.com/baidu-rmb-video-cover-1/goods/2022-11/1668701480293/dd3a15fcc40b.png" height="60" alt="cheetah" />
+<img src="https://pic.rmb.bdstatic.com/activity/2025-11/1762943255629/692840b3bee6.png" height="60" alt="cheetah" />
 </div>
+
 基于自定义编译ffmpeg的截帧工具，支持Mp4、Mov、Avi、Webm、Mkv等主流格式。
 
 ## API
@@ -51,6 +54,8 @@
 |  ----  | ----  |----  |----  |
 | onSuccess  | () => void  | 成功的回调  | n |
 
+`terminate: () => void` 终止 Worker 并释放所有资源（包括 WASM 内存）。建议在完成所有操作后调用。
+
 * 使用例子可以参考 `demo/index.html`。
 
 ## 依赖库&编译工具
@@ -68,6 +73,8 @@
 
 ```shell
   git pull
+  # 切换到兼容的版本
+  git checkout 3d6d8ee910466516a53e665b86458faa81dae9ba
   # Download and install the latest SDK tools.
   ./emsdk install latest
   # Make the "latest" SDK "active" for the current user. (writes .emscripten file)

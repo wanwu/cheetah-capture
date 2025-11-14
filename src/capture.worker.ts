@@ -5,6 +5,8 @@ interface CMsgRetType {
     duration: number;
     imageDataBuffer: Uint8ClampedArray;
 }
+const metaDataMap = {};
+
 class ImageCapture {
     isMKDIR: boolean;
     cCaptureByCount: (info: number, path: string, id: number) => number;
@@ -35,9 +37,11 @@ class ImageCapture {
         const duration = Module.HEAPU32[imgDataPtr + 2];
         const imageBufferPtr = Module.HEAPU32[imgDataPtr + 3];
         const imageBuffer = Module.HEAPU8.slice(imageBufferPtr, imageBufferPtr + width * height * 3);
-        //   Module._free(imgDataPtr);
-        //   Module._free(imageBufferPtr);
-        this.imgDataPtrList.push(imgDataPtr);
+
+        // 保存字节地址用于释放：imgDataPtr 是索引，需要乘以 4 转为字节地址
+        const imgDataByteAddr = imgDataPtr * 4;
+
+        this.imgDataPtrList.push(imgDataByteAddr);
         this.imgBufferPtrList.push(imageBufferPtr);
 
         const imageDataBuffer = new Uint8ClampedArray(width * height * 4);
@@ -66,7 +70,8 @@ class ImageCapture {
         const duration = Module.HEAPU32[imgDataPtr + 2];
         const imageBufferPtr = Module.HEAPU32[imgDataPtr + 3];
         const imageBuffer = Module.HEAPU8.slice(imageBufferPtr, imageBufferPtr + width * height * 3);
-        Module._free(imgDataPtr);
+        // imgDataPtr 是 HEAPU32 索引，需要乘以 4 转为字节地址
+        Module._free(imgDataPtr * 4);
         Module._free(imageBufferPtr);
 
         const imageDataBuffer = new Uint8ClampedArray(width * height * 4);
@@ -155,11 +160,11 @@ class ImageCapture {
     }
     free({id}) {
         // 释放指针内存
-        this.imgDataPtrList.forEach(ptr => {
+        this.imgDataPtrList.forEach((ptr, index) => {
             try {
                 Module._free(ptr);
             } catch (e) {
-                console.warn('Free pointer failed:', e);
+                console.warn('[Worker] Free imgData pointer failed:', e);
             }
         });
         this.imgDataPtrList = [];
@@ -167,10 +172,21 @@ class ImageCapture {
             try {
                 Module._free(ptr);
             } catch (e) {
-                console.warn('Free buffer pointer failed:', e);
+                console.warn('[Worker] Free buffer pointer failed:', e);
             }
         });
         this.imgBufferPtrList = [];
+
+        if (this.imageList[id]) {
+            delete this.imageList[id];
+        }
+        if (this.captureInfo[id]) {
+            delete this.captureInfo[id];
+        }
+        if (metaDataMap[id]) {
+            delete metaDataMap[id];
+        }
+
         // 释放文件系统挂载
         if (this.name && this.path) {
             try {
@@ -290,7 +306,6 @@ class ImageCapture {
 const imageCapture = new ImageCapture();
 
 let isInit = false;
-const metaDataMap = {};
 
 self.addEventListener('message', e => {
     const {
