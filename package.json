@@ -1,6 +1,6 @@
 {
   "name": "cheetah-capture",
-  "version": "0.4.3",
+  "version": "0.5.0-beta.1",
   "description": "cheetah-capture是基于ffmpeg的wasm截取视频帧工具",
   "keywords": [
     "ffmpeg",
