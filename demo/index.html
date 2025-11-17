@@ -253,15 +253,10 @@
 
     <script src="../dist/index.js" type="application/javascript"></script>
     <script>
-        // 智能路径配置 - 兼容不同的启动方式
-        const currentPath = window.location.pathname;
-        const isInDemo = currentPath.includes('/demo/');
-        
-        // 如果在 demo 目录下，使用相对路径；否则使用绝对路径
         // 添加时间戳防止浏览器缓存
         const timestamp = Date.now();
-        const workerPath = (isInDemo ? '../dist/capture.worker.js' : '/dist/capture.worker.js') + '?v=' + timestamp;
-        const wasmPath = (isInDemo ? '../dist/capture.worker.wasm' : '/dist/capture.worker.wasm') + '?v=' + timestamp;
+        const workerPath = '../dist/capture.worker.js?v=' + timestamp;
+        const wasmPath = '../dist/capture.worker.wasm?v=' + timestamp;
         
         // DOM 元素
         const button = document.querySelector('#js_button');
@@ -274,38 +269,15 @@
         const audioInfoContainer = document.querySelector('#js_audio_info');
         const timeInput = document.querySelector('#js_time');
 
-        // 初始化 Cheetah Capture - 添加错误处理
+        // 初始化 Cheetah Capture
         console.log('开始初始化 Cheetah Capture...');
-        console.log('当前页面路径:', currentPath);
-        console.log('是否在 demo 目录:', isInDemo);
         console.log('Worker 路径:', workerPath);
         console.log('WASM 路径:', wasmPath);
         console.log('完整 Worker URL:', new URL(workerPath, window.location.href).href);
         console.log('完整 WASM URL:', new URL(wasmPath, window.location.href).href);
         
-        // 显示初始化状态
-        infoContainer.innerHTML = '⏳ 正在初始化 WASM 模块，请稍候...';
-        
-        let captureInstance = null;
-        let isReady = false;
-        
-        const capturePro = cheetahCapture.initCapture({
-            workerPath,
-            wasmPath,
-        }).then(instance => {
-            console.log('✅ Cheetah Capture 初始化成功');
-            captureInstance = instance;
-            isReady = true;
-            infoContainer.innerHTML = '<span class="success-text">✅ 初始化完成，可以开始使用</span>';
-            return instance;
-        }).catch(error => {
-            console.error('❌ Cheetah Capture 初始化失败:', error);
-            infoContainer.innerHTML = '<span class="error-text">❌ 初始化失败: ' + error.message + '</span>';
-            // 禁用按钮
-            button.disabled = true;
-            audioCheckButton.disabled = true;
-            throw error;
-        });
+        // 显示就绪状态
+        infoContainer.innerHTML = '<span class="success-text">✅ 已就绪，请选择视频文件开始使用</span>';
 
         // 文件选择监听
         fileInput.addEventListener('change', (e) => {
@@ -335,13 +307,6 @@
         audioCheckButton.addEventListener('click', async () => {
             console.log('🔊 点击音轨检测按钮');
             
-            // 检查初始化状态
-            if (!isReady) {
-                audioInfoContainer.innerHTML = '<span class="warning-text">⚠️ WASM 模块正在初始化中，请稍候...</span>';
-                console.log('⚠️ WASM 未就绪');
-                return;
-            }
-            
             const files = fileInput.files;
             if (files.length === 0) {
                 audioInfoContainer.innerHTML = '<span class="warning-text">⚠️ 请先选择视频文件</span>';
@@ -356,13 +321,19 @@
             const file = files[0];
             console.log('准备检测文件:', file.name);
             
+            // 创建新的 Worker 实例
             let res;
             try {
-                res = await capturePro;
-                console.log('✅ 获取到 capture 实例:', res);
+                console.log('🔄 创建新的 Capture 实例...');
+                const captureInstance = cheetahCapture.initCapture({
+                    workerPath,
+                    wasmPath,
+                });
+                res = await captureInstance;
+                console.log('✅ Capture 实例创建成功');
             } catch (error) {
-                console.error('❌ 获取 capture 实例失败:', error);
-                audioInfoContainer.innerHTML = '<span class="error-text">❌ 初始化失败，请刷新页面重试</span>';
+                console.error('❌ 创建 Capture 实例失败:', error);
+                audioInfoContainer.innerHTML = '<span class="error-text">❌ 初始化失败: ' + error.message + '</span>';
                 audioCheckButton.disabled = false;
                 button.disabled = false;
                 return;
@@ -395,6 +366,8 @@
                                     res.free({
                                         onSuccess: () => {
                                             console.log('✅ 资源释放成功');
+                                            res.terminate();
+                                            console.log('🔚 Worker 已终止');
                                             resolve();
                                         }
                                     });
@@ -403,12 +376,14 @@
                                     clearTimeout(timeout);
                                     console.error('❌ 检测音轨失败:', error);
                                     audioInfoContainer.innerHTML = '<span class="error-text">❌ 检测音轨失败: ' + error + '</span>';
+                                    res.terminate();
                                     reject(error);
                                 }
                             });
                             } catch (error) {
                                 console.error('❌ 检测音轨出错:', error);
                                 audioInfoContainer.innerHTML = '<span class="error-text">❌ 检测音轨失败: ' + error + '</span>';
+                                res.terminate();
                                 reject(error);
                             }
                         },
@@ -416,6 +391,7 @@
                             clearTimeout(timeout);
                             console.error('❌ 挂载文件失败:', error);
                             audioInfoContainer.innerHTML = '<span class="error-text">❌ 挂载文件失败: ' + error + '</span>';
+                            res.terminate();
                             reject(error);
                         }
                     });
@@ -423,6 +399,10 @@
             } catch (error) {
                 console.error('❌ 音轨检测出错:', error);
                 audioInfoContainer.innerHTML = '<span class="error-text">❌ ' + error.message + '</span>';
+                // 确保即使异常也终止 Worker
+                if (res && res.terminate) {
+                    res.terminate();
+                }
             } finally {
                 // 恢复按钮状态
                 audioCheckButton.disabled = false;
@@ -432,13 +412,6 @@
 
         button.addEventListener('click', async () => {
             console.log('🎞️ 点击提取视频帧按钮');
-            
-            // 检查初始化状态
-            if (!isReady) {
-                infoContainer.innerHTML = '<span class="warning-text">⚠️ WASM 模块正在初始化中，请稍候...</span>';
-                console.log('⚠️ WASM 未就绪');
-                return;
-            }
             
             const files = fileInput.files;
             if (files.length === 0) {
@@ -463,24 +436,31 @@
             resultContainerWrapper.style.display = 'block';
             audioInfoContainer.innerHTML = '';
             
-            let res;
-            try {
-                res = await capturePro;
-                console.log('✅ 获取到 capture 实例:', res);
-            } catch (error) {
-                console.error('❌ 获取 capture 实例失败:', error);
-                infoContainer.innerHTML = '<span class="error-text">❌ 初始化失败，请刷新页面重试</span>';
-                button.disabled = false;
-                audioCheckButton.disabled = false;
-                return;
-            }
-            
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const startTime = Date.now();
                 
+                console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
                 console.log(`📊 开始处理文件 ${i + 1}/${files.length}:`, file.name);
-                infoContainer.innerHTML = `📊 正在处理文件 ${i + 1}/${files.length}: <strong>${file.name}</strong><br>⏳ 挂载文件中...`;
+                infoContainer.innerHTML = `📊 正在处理文件 ${i + 1}/${files.length}: <strong>${file.name}</strong><br>⏳ 初始化 Worker...`;
+                
+                let res;
+                try {
+                    console.log('🔄 创建新的 Capture 实例...');
+                    const captureInstance = cheetahCapture.initCapture({
+                        workerPath,
+                        wasmPath,
+                        onReady: () => {
+                            console.log('✅ Worker 就绪');
+                        },
+                    });
+                    res = await captureInstance;
+                    console.log('✅ Capture 实例创建成功');
+                } catch (error) {
+                    console.error('❌ 创建 Capture 实例失败:', error);
+                    infoContainer.innerHTML = `<span class="error-text">❌ 文件 ${i + 1} 初始化失败: ${error.message}</span>`;
+                    continue;
+                }
                 
                 try {
                     await new Promise((resolve, reject) => {
@@ -491,6 +471,12 @@
                         
                         // 使用改造后的 mountFile API，只传 file 参数
                         console.log('开始挂载文件...');
+                        infoContainer.innerHTML = `📊 正在处理文件 ${i + 1}/${files.length}: <strong>${file.name}</strong><br>⏳ 挂载文件中...`;
+                        console.log(`📊 内存监控 - 开始前: ${(performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
+                        
+                        // 存储当前文件的所有 base64 URL，用于后续清理
+                        const currentFileUrls = [];
+                        
                         res.mountFile({
                             file, // path 参数已经变成可选的，默认为 '/working'
                             onSuccess: () => {
@@ -513,9 +499,13 @@
                                         const { width, height, duration } = info;
                                         frameCount++;
                                         
+                                        // 保存 URL 引用用于后续清理
+                                        currentFileUrls.push(now.url);
+                                        
                                         const img = document.createElement('img');
                                         img.src = now.url;
                                         img.title = `帧 ${frameCount}/${captureTimes} - ${file.name}`;
+                                        img.dataset.frameIndex = frameCount;
                                         resultContainer.appendChild(img);
 
                                         infoContainer.innerHTML = `
@@ -528,6 +518,8 @@
                                     },
                                     onSuccess: (list) => {
                                         console.log(`✅ 文件 ${i + 1} 截帧完成，共 ${frameCount} 帧`);
+                                        console.log(`📊 内存监控 - 释放前: ${(performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
+                                        
                                         infoContainer.innerHTML = `
                                             <span class="success-text">✅ 文件 ${i + 1}/${files.length} 处理完成: ${file.name}</span><br>
                                             ⏱️ 总耗时：${Date.now() - startTime}ms<br>
@@ -537,6 +529,20 @@
                                         res.free({
                                             onSuccess: () => {
                                                 console.log('✅ 资源释放成功');
+                                                console.log(`📊 内存监控 - 释放后: ${(performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
+                                                
+                                                // 清空 URL 引用数组，帮助 GC 回收
+                                                currentFileUrls.length = 0;
+                                                
+                                                res.terminate();
+                                                console.log('🔚 Worker 已终止，所有资源已释放');
+                                                
+                                                // 延迟检查内存释放情况（给 GC 一些时间）
+                                                setTimeout(() => {
+                                                    console.log(`📊 内存监控 - Worker终止后: ${(performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
+                                                    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+                                                }, 1000);
+                                                
                                                 resolve();
                                             }
                                         });
@@ -545,6 +551,10 @@
                                         clearTimeout(timeout);
                                         console.error('❌ 截帧失败:', error);
                                         infoContainer.innerHTML = `<span class="error-text">❌ 截帧失败: ${error}</span>`;
+                                        // 清理已创建的 URL 引用
+                                        currentFileUrls.length = 0;
+                                        // 错误时也终止 Worker
+                                        res.terminate();
                                         reject(error);
                                     }
                                 });
@@ -553,6 +563,8 @@
                                 clearTimeout(timeout);
                                 console.error('❌ 挂载文件失败:', error);
                                 infoContainer.innerHTML = `<span class="error-text">❌ 挂载文件失败: ${error}</span>`;
+                                // 挂载失败时也终止 Worker
+                                res.terminate();
                                 reject(error);
                             }
                         });
@@ -560,6 +572,10 @@
                 } catch (error) {
                     console.error('❌ 处理文件出错:', error);
                     infoContainer.innerHTML = `<span class="error-text">❌ 处理文件失败: ${error.message}</span>`;
+                    // 确保即使异常也终止 Worker
+                    if (res && res.terminate) {
+                        res.terminate();
+                    }
                     break;
                 }
             }

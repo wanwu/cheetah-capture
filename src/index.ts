@@ -224,6 +224,13 @@ class Capture {
         });
     }
 
+    terminate() {
+        if (captureWorker) {
+            captureWorker.terminate();
+            captureWorker = null;
+        }
+    }
+
 }
 
 
@@ -242,9 +249,8 @@ export async function initCapture({
                 const {angle = 0} = meta;
                 const img = await getUrl(width, height, imageDataBuffer, angle);
                 const cbk = pool.getCbk(id);
-                const {onChange} = cbk;
+                const {onChange, cache} = cbk;
                 const info = {width, height, duration: Number(duration) / 1000};
-                const {cache} = pool.getCbk(id);
                 cache.url = cache?.url || [];
                 onChange && onChange({url: cache.url}, img, info);
                 cache.url.push(img.url);
@@ -253,10 +259,9 @@ export async function initCapture({
             case Events.receiveImageOnSuccess: {
                 const {id, meta} = e.data || {};
                 const cbk = pool.getCbk(id) || {};
-                const {onSuccess} = cbk;
-                const {cache} = pool.getCbk(id);
+                const {onSuccess, cache} = cbk;
                 onSuccess && onSuccess({
-                    url: cache.url,
+                    url: cache?.url,
                     meta: meta as MetaDatatype,
                 });
                 break;

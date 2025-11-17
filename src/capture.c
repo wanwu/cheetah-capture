@@ -204,6 +204,7 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
                 // printf("pFrame%d\n", FirstPts);
                 int nowTime = pFrame->pts;
                 if (nowTime < nearInum) {
+                    av_packet_unref(&packet);
                     continue;
                 }
                 // 如果是第0帧 插入frameList
@@ -228,17 +229,15 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
                     sws_scale(sws_ctx, (uint8_t const *const *)pFrame->data, pFrame->linesize, 0,
                     pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
                     // sws_scale做分辨率像素视频格式转换
-                    // sws_freeContext(sws_ctx);
-                    // av_frame_free(&pFrame);
-                    // av_packet_unref(&packet);
                     buzhang = nowTime;
                     isSeekFrame = 1;
-                    // return pFrameRGB;
+                    av_packet_unref(&packet);
                     break;
                 }
             }
         }
-        // 这一次找到的时间
+        // 释放未使用的 packet（如果循环中没有 break）
+        av_packet_unref(&packet);
     }
     // printf("这一次找到的是%d,isSeekFrame%d\n", buzhang, isSeekFrame);
     frameInfo->lastKeyframe = buzhang;
@@ -246,7 +245,7 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
     frameInfo->lastIframe = nearInum;
     sws_freeContext(sws_ctx);
     av_frame_free(&pFrame);
-    av_packet_unref(&packet);
+    // packet 已在循环中释放，不需要再次 unref
 
     return pFrameRGB;
 }
@@ -264,10 +263,10 @@ uint8_t *getFrameBuffer(AVFrame *pFrame, AVCodecContext *pCodecCtx)
     }
     return buffer;
 }
-const char *get_js_code(ImageData ptr, int id)
+const char *get_js_code(ImageData *ptr, int id)
 {
     static char buf[1024];
-    sprintf(buf, "transpostFrame(%d,%d)", ptr, id);
+    snprintf(buf, sizeof(buf), "transpostFrame(%d,%d)", (int)ptr, id);
     return buf;
 }
 ImageData *getSpecificFrame(AVCodecContext *pNewCodecCtx, AVFormatContext *pFormatCtx,
@@ -297,7 +296,7 @@ int videoStream, int time, FrameInfo *frameInfo, int *Iframe, int counts, int id
         imageData->duration = 0;
     }
     imageData->data = getFrameBuffer(pFrameRGB, pNewCodecCtx);
-    emscripten_run_script(get_js_code(*imageData, id));
+    emscripten_run_script(get_js_code(imageData, id));
     av_frame_free(&pFrameRGB);
     av_free(frameBuffer);
     return imageData;
@@ -351,7 +350,6 @@ int captureByCount(int count, char *path, int id)
     // 第一帧立即抽出 第一帧一定是I帧 时间0
     int videoStream = -1;
     AVCodecContext *pNewCodecCtx = NULL;
-    ImageData *dataList = NULL;
     FrameInfo *frameInfo = NULL;
     
     // 初始化读取文件
@@ -365,8 +363,8 @@ int captureByCount(int count, char *path, int id)
     
     const char *def_desc = "";
     const char *description = dump_metadata(NULL, pFormatCtx->metadata, "description", def_desc);
-    static char setDescription[1024];
-    sprintf(setDescription, "setDescription(`%s`, %d)", description, id);
+    static char setDescription[2048];
+    snprintf(setDescription, sizeof(setDescription), "setDescription(`%s`, %d)", description, id);
     emscripten_run_script(setDescription);
     // 如果返回的不是默认值，需要释放内存
     if (description != def_desc) {
@@ -416,21 +414,11 @@ int captureByCount(int count, char *path, int id)
         return 0;
     }
     
-    dataList = (ImageData *)malloc(sizeof(ImageData) * count);
-    if (!dataList)
-    {
-        fprintf(stderr, "Could not allocate dataList\n");
-        avcodec_close(pNewCodecCtx);
-        avcodec_free_context(&pNewCodecCtx);
-        avformat_close_input(&pFormatCtx);
-        return 0;
-    }
-    
+    // 不需要 dataList，getSpecificFrame 内部已通过 transpostFrame 传递给 JS
     frameInfo = (FrameInfo *)malloc(sizeof(FrameInfo));
     if (!frameInfo)
     {
         fprintf(stderr, "Could not allocate frameInfo\n");
-        free(dataList);
         avcodec_close(pNewCodecCtx);
         avcodec_free_context(&pNewCodecCtx);
         avformat_close_input(&pFormatCtx);
@@ -443,14 +431,13 @@ int captureByCount(int count, char *path, int id)
     const char *def_rotate = "0";
     const char *rotate = dump_metadata(NULL, st->metadata, "rotate", def_rotate);
     static char setAngle[1024];
-    sprintf(setAngle, "setAngle(%s, %d)", rotate, id);
+    snprintf(setAngle, sizeof(setAngle), "setAngle(%s, %d)", rotate, id);
     emscripten_run_script(setAngle);
     // 如果返回的不是默认值，需要释放内存
     if (rotate != def_rotate) {
         free((void*)rotate);
     }
-    dataList[0] = *(getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id));
-    // emscripten_run_script(get_js_code(dataList[0])); // 把第一帧传出去
+    getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id);
     // TODO:
     // seek I frame
     int iFrameCounts = getIframes(pFormatCtx, videoStream, 0, Iframe, 1);
@@ -539,13 +526,12 @@ int captureByCount(int count, char *path, int id)
 
     for (int idx = 1; idx < count; idx++)
     {
-        dataList[idx] = *(getSpecificFrame(pNewCodecCtx, pFormatCtx,
-        videoStream, timeFrameList[idx], frameInfo, Iframe, iFrameCounts, id));
+        // getSpecificFrame 内部已通过 emscripten_run_script 传递给 JS，无需保存返回值
+        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, timeFrameList[idx], frameInfo, Iframe, iFrameCounts, id);
     }
 
     // 清理资源
     free(frameInfo);
-    free(dataList);
     avcodec_close(pNewCodecCtx);
     avcodec_free_context(&pNewCodecCtx);
     // 注意：pCodec 是从 avcodec_find_decoder 返回的，不需要也不应该释放
@@ -590,36 +576,54 @@ ImageData **captureByMs(char *ms, char *path, int id)
     AVCodec *pCodec = NULL;
     // 初始化读取文件
     AVCodecContext *pCodecCtx = initFileAndGetInfo(pFormatCtx, path, pCodec, &videoStream);
+    if (pCodecCtx == NULL)
+    {
+        fprintf(stderr, "initFileAndGetInfo failed\n");
+        avformat_close_input(&pFormatCtx);
+        return NULL;
+    }
+    
     pCodec = initDecoder(pCodecCtx, pFormatCtx);
     if (pCodec == NULL)
     {
         fprintf(stderr, "avcodec_find_decoder failed\n");
+        avformat_close_input(&pFormatCtx);
         return NULL;
     }
     AVCodecContext *pNewCodecCtx = avcodec_alloc_context3(pCodec);
+    if (!pNewCodecCtx)
+    {
+        fprintf(stderr, "Could not allocate AVCodecContext\n");
+        avformat_close_input(&pFormatCtx);
+        return NULL;
+    }
+    
     if (avcodec_copy_context(pNewCodecCtx, pCodecCtx) != 0)
     {
         fprintf(stderr, "avcodec_copy_context failed\n");
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
         return NULL;
     }
 
     if (avcodec_open2(pNewCodecCtx, pCodec, NULL) < 0)
     {
         fprintf(stderr, "avcodec_open2 failed\n");
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
         return NULL;
     }
-
-    if (!pNewCodecCtx)
-    {
-        fprintf(stderr, "pNewCodecCtx is NULL\n");
-        return NULL;
-    }
-    // 申请空间 创建结构体指针的数组
-    // 声明装imageData类型的指针
-    ImageData *dataList = (ImageData *)malloc(sizeof(ImageData) * len);
     int idx = 0;
     FrameInfo *frameInfo;
     frameInfo = (FrameInfo *)malloc(sizeof(FrameInfo));
+    if (!frameInfo)
+    {
+        fprintf(stderr, "Could not allocate frameInfo\n");
+        avcodec_close(pNewCodecCtx);
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
+        return NULL;
+    }
     // 初始化结构体
     frameInfo->lastKeyframe = 0;
     frameInfo->lastIframe = -1;
@@ -628,7 +632,7 @@ ImageData **captureByMs(char *ms, char *path, int id)
     // 第一帧立即抽出 第一帧一定是I帧 时间0
     if (frameData[idx] == 0)
     {
-        dataList[0] = *(getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id));
+        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id);
         idx = 1;
     }
     // TODO:
@@ -645,21 +649,18 @@ ImageData **captureByMs(char *ms, char *path, int id)
 
     for (idx; idx < len; idx++)
     {
-        // 生成结构体 模拟生成指针 存到dataList
         int timeStamp = ((double)(frameData[idx]) / (double)1000)
         * pFormatCtx->streams[videoStream]->time_base.den / pFormatCtx->streams[videoStream]->time_base.num;
-        dataList[idx] = *(getSpecificFrame(pNewCodecCtx, pFormatCtx,
-        videoStream, timeStamp, frameInfo, Iframe, counts, id));
-        // dataList[idx] = *imageData;
-        // free
+        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, timeStamp, frameInfo, Iframe, counts, id);
     }
 
+    // ImageData* 指针由 JS 端持有并负责释放
+    free(frameInfo);
     avcodec_close(pNewCodecCtx);
-    av_free(pCodec);
-    avcodec_close(pCodecCtx);
-
+    avcodec_free_context(&pNewCodecCtx);
+    // pCodec 是从 avcodec_find_decoder 返回的，不需要也不应该释放
+    // pCodecCtx 是 pFormatCtx->streams[videoStream]->codec 的引用，会随 pFormatCtx 释放
     avformat_close_input(&pFormatCtx);
-    // dataList 已通过 transpostFrame 传递，这里返回 NULL
     return NULL;
 }
 
