@@ -104,35 +104,91 @@ static const char *dump_metadata(void *ctx, AVDictionary *m, const char *indent,
     return def;  // 返回默认值，不需要 free
 }
 
-int getIframes(AVFormatContext *qFormatCtx, int videoStream, int timeStamp, int *framesList, int idx)
+int getIframes(AVFormatContext *qFormatCtx, int videoStream, int timeStamp, int **framesList, int idx, int *capacity)
 {
     // ===============寻找I帧
     AVPacket qPacket;
     int count = idx;
+    
+    if (*capacity == 0) {
+        *capacity = 200;
+        *framesList = (int *)malloc(*capacity * sizeof(int));
+        if (*framesList == NULL) {
+            fprintf(stderr, "Failed to allocate memory for framesList (size: %d)\n", *capacity);
+            *capacity = 0;
+            return -1;
+        }
+    }
+    
     while (av_read_frame(qFormatCtx, &qPacket) >= 0)
     { // 读出完整的帧
         if (qPacket.stream_index == videoStream)
         {
-            if (count > 199)
+            // 如果数组空间不够，扩展容量
+            if (count >= *capacity)
             {
-                break;
+                // 设置最大容量限制，防止内存过度分配
+                const int MAX_CAPACITY = 50000;  // 最多支持约50000个I帧
+                if (*capacity >= MAX_CAPACITY) {
+                    fprintf(stderr, "警告: I帧数量超过最大限制 %d\n", MAX_CAPACITY);
+                    av_packet_unref(&qPacket);
+                    break;
+                }
+                
+                // 根据当前容量选择增长策略
+                int newCapacity;
+                if (*capacity < 1000) {
+                    newCapacity = *capacity * 2;  // 小容量时翻倍
+                } else {
+                    newCapacity = *capacity + (*capacity / 2);  // 大容量时增长50%
+                }
+                
+                // 确保不超过最大容量
+                if (newCapacity > MAX_CAPACITY) {
+                    newCapacity = MAX_CAPACITY;
+                }
+                
+                int *newList = (int *)realloc(*framesList, newCapacity * sizeof(int));
+                if (newList == NULL) {
+                    fprintf(stderr, "Failed to reallocate memory for framesList (new size: %d)\n", newCapacity);
+                    // 注意：不释放 *framesList，让调用者决定如何处理
+                    // 调用者可以继续使用当前已有的数据，或者释放内存
+                    av_packet_unref(&qPacket);
+                    return -1;  // 返回错误，但保持原指针有效
+                }
+                
+                *framesList = newList;
+                *capacity = newCapacity;
+                printf("扩展 Iframe 数组容量: %d -> %d\n", *capacity / 2, newCapacity);
             }
+            
             if (qPacket.flags == 1)
             {
-                framesList[count] = qPacket.pts;
+                (*framesList)[count] = qPacket.pts;
                 count++;
             }
         }
+        
+        // 及时释放 packet 避免内存泄漏
+        av_packet_unref(&qPacket);
     }
+    
+    // 优化：如果实际使用远小于分配容量，可以缩减内存
+    if (count > 0 && count < *capacity / 2) {
+        int *trimmedList = (int *)realloc(*framesList, count * sizeof(int));
+        if (trimmedList != NULL) {
+            *framesList = trimmedList;
+            *capacity = count;
+            printf("优化内存: 缩减 Iframe 数组到实际大小 %d\n", count);
+        }
+        // 如果缩减失败也没关系，继续使用原来的
+    }
+    
     return count;
-    // if(key_frame_timestamp == stream->start_time){
-    //     return -1;
-    // }
-    // ================================
 }
 
 AVFrame *readAVFrame(AVCodecContext *pCodecCtx, AVFormatContext *pFormatCtx, AVFrame *pFrameRGB,
-int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
+int videoStream, int timeStamp, FrameInfo *frameInfo, int **Iframe, int icount)
 {
     struct SwsContext *sws_ctx = NULL;
 
@@ -151,15 +207,15 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
     int flag = 0;
     for (int i = 0; i < icount; i++)
     {
-        if (Iframe[i] > timeStamp)
+        if ((*Iframe)[i] > timeStamp)
         {
             break;
         }
-        if (flag == 0 || chazhi > (timeStamp - Iframe[i]))
+        if (flag == 0 || chazhi > (timeStamp - (*Iframe)[i]))
         {
             flag = 1;
-            nearInum = Iframe[i];
-            chazhi = timeStamp - Iframe[i];
+            nearInum = (*Iframe)[i];
+            chazhi = timeStamp - (*Iframe)[i];
         }
     }
     if (nearInum < 0)
@@ -210,7 +266,7 @@ int videoStream, int timeStamp, FrameInfo *frameInfo, int *Iframe, int icount)
                 // 如果是第0帧 插入frameList
                 if (icount == 0)
                 {
-                    Iframe[0] = nowTime;
+                    (*Iframe)[0] = nowTime;
                 }
                 printf("nowtime==>%d,frameInfo->lastKeyframe%d,chazhi%d,base是%d\n", nowTime, frameInfo->lastKeyframe, chazhi, pFormatCtx->streams[videoStream]->time_base.den
                             / pFormatCtx->streams[videoStream]->time_base.num);
@@ -270,7 +326,7 @@ const char *get_js_code(ImageData *ptr, int id)
     return buf;
 }
 ImageData *getSpecificFrame(AVCodecContext *pNewCodecCtx, AVFormatContext *pFormatCtx,
-int videoStream, int time, FrameInfo *frameInfo, int *Iframe, int counts, int id)
+int videoStream, int time, FrameInfo *frameInfo, int **Iframe, int counts, int id)
 {
     uint8_t *frameBuffer = 0;
     AVFrame *pFrameRGB = initAVFrame(pNewCodecCtx, &frameBuffer);
@@ -345,7 +401,8 @@ int captureByCount(int count, char *path, int id)
     // printf("%d", res);
     AVCodec *pCodec = NULL;
     // AVCodecContext *≈=NULL;
-    int Iframe[200];
+    int *Iframe = NULL;  // 改为动态分配
+    int iframeCapacity = 0;  // 记录当前容量
     // 先获取全部的i帧 只需要第一次执行
     // 第一帧立即抽出 第一帧一定是I帧 时间0
     int videoStream = -1;
@@ -437,10 +494,22 @@ int captureByCount(int count, char *path, int id)
     if (rotate != def_rotate) {
         free((void*)rotate);
     }
-    getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id);
+    getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, &Iframe, 0, id);
     // TODO:
     // seek I frame
-    int iFrameCounts = getIframes(pFormatCtx, videoStream, 0, Iframe, 1);
+    int iFrameCounts = getIframes(pFormatCtx, videoStream, 0, &Iframe, 1, &iframeCapacity);
+    if (iFrameCounts < 0)
+    {
+        fprintf(stderr, "getIframes failed\n");
+        if (Iframe != NULL) {
+            free(Iframe);
+        }
+        free(frameInfo);
+        avcodec_close(pNewCodecCtx);
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
+        return 0;
+    }
         // 间隔2s 在ffmpeg里面的时间
     int base = pFormatCtx->streams[videoStream]->time_base.den / pFormatCtx->streams[videoStream]->time_base.num;
     printf("===>总共是%d, duration是%d,base是%d\n", iFrameCounts, duration, base);
@@ -527,10 +596,13 @@ int captureByCount(int count, char *path, int id)
     for (int idx = 1; idx < count; idx++)
     {
         // getSpecificFrame 内部已通过 emscripten_run_script 传递给 JS，无需保存返回值
-        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, timeFrameList[idx], frameInfo, Iframe, iFrameCounts, id);
+        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, timeFrameList[idx], frameInfo, &Iframe, iFrameCounts, id);
     }
 
     // 清理资源
+    if (Iframe != NULL) {
+        free(Iframe);
+    }
     free(frameInfo);
     avcodec_close(pNewCodecCtx);
     avcodec_free_context(&pNewCodecCtx);
@@ -627,21 +699,30 @@ ImageData **captureByMs(char *ms, char *path, int id)
     // 初始化结构体
     frameInfo->lastKeyframe = 0;
     frameInfo->lastIframe = -1;
-    int Iframe[200];
+    int *Iframe = NULL;  // 改为动态分配
+    int iframeCapacity = 0;  // 记录当前容量
     // 先获取全部的i帧 只需要第一次执行
     // 第一帧立即抽出 第一帧一定是I帧 时间0
     if (frameData[idx] == 0)
     {
-        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, Iframe, 0, id);
+        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, 0, frameInfo, &Iframe, 0, id);
         idx = 1;
     }
     // TODO:
     // seek I frame
-    int counts = getIframes(pFormatCtx, videoStream, 0, Iframe, idx);
-    if (counts == -1)
+    int counts = getIframes(pFormatCtx, videoStream, 0, &Iframe, idx, &iframeCapacity);
+    if (counts < 0)
     {
         // 说明关键帧的读取失败了
-        printf("get keyframes error!");
+        fprintf(stderr, "getIframes failed\n");
+        if (Iframe != NULL) {
+            free(Iframe);
+        }
+        free(frameInfo);
+        avcodec_close(pNewCodecCtx);
+        avcodec_free_context(&pNewCodecCtx);
+        avformat_close_input(&pFormatCtx);
+        return NULL;
     }
     printf("keyframe counts %d...长度%d\n", counts, len);
     // 先seek到第一帧的地方 这里先写0了 实际应该是传进来的第一帧时间
@@ -651,10 +732,13 @@ ImageData **captureByMs(char *ms, char *path, int id)
     {
         int timeStamp = ((double)(frameData[idx]) / (double)1000)
         * pFormatCtx->streams[videoStream]->time_base.den / pFormatCtx->streams[videoStream]->time_base.num;
-        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, timeStamp, frameInfo, Iframe, counts, id);
+        getSpecificFrame(pNewCodecCtx, pFormatCtx, videoStream, timeStamp, frameInfo, &Iframe, counts, id);
     }
 
     // ImageData* 指针由 JS 端持有并负责释放
+    if (Iframe != NULL) {
+        free(Iframe);
+    }
     free(frameInfo);
     avcodec_close(pNewCodecCtx);
     avcodec_free_context(&pNewCodecCtx);
