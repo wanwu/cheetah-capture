@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.5.1](https://github.com/wanwu/cheetah-capture/compare/v0.5.0...v0.5.1) (2025-12-11)
+
+
+### Bug Fixes
+
+* Remove the 200 keyframe limit, now supports dynamic allocation with auto-scaling up to 50,000 keyframes ([#13](https://github.com/wanwu/cheetah-capture/issues/13))
+
+
 ### [0.5.0](https://github.com/wanwu/cheetah-capture/compare/v0.4.1...v0.5.0) (2025-11-17)
 
 
