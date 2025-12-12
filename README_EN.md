@@ -100,7 +100,7 @@ source ./emsdk_env.sh
 Scripts under `script`:
 
 * `build_ffmpeg-3.4.8.sh` - Compile FFmpeg lib for local C compilation environment
-* `build-emcc.sh` - Compile FFmpeg lib for emcc environment, output to lib/ffmpeg-emcc
+* `build_ffmpeg-emcc.sh` - Compile FFmpeg lib for emcc environment with minimal config (disable audio processing and filters to reduce wasm size), output to lib/ffmpeg-emcc
 * `build_wasm.sh` - Compile wasm and glue code & worker code using ems
 * `build.sh` - Same as above plus generate dts types
 
@@ -115,7 +115,7 @@ Start `index.html` in the demo folder using `live server`: `live-server --port=5
 Prerequisites: Complete the preparation work
 
 - For C environment debugging: Execute `sh build_ffmpeg-3.4.8.sh` in the scripts directory to compile libs for your environment, then `sh reload.sh` to execute the capture.c file.
-- For JS environment debugging: First execute `build-emcc.sh` to generate FFmpeg libs for emcc environment. If libs already exist, directly execute `sh build-wasm.sh`, which includes `npm run webpack-capture` and `emcc` compilation commands. The former generates `index.js` and `capture.worker.js`, the latter generates `capture.worker.js` (with emcc glue code) and `capture.worker.wasm`.
+- For JS environment debugging: If you want to custom compile FFmpeg libs, first execute `build_ffmpeg-emcc.sh` to generate FFmpeg libs for emcc environment. If you don't need custom compilation and want to use the prebuilt libs in this repository, directly execute `sh build-wasm.sh`, which includes `npm run webpack-capture` and `emcc` compilation commands. The former generates `index.js` and `capture.worker.js`, the latter generates `capture.worker.js` (with emcc glue code) and `capture.worker.wasm`.
 - For HTML environment: Just include `index.js`, UMD variable `cheetahCapture`.
 
 ## Version Control
