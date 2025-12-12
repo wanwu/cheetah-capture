@@ -89,7 +89,7 @@
 * 安装依赖 `npm i`，执行script目录下的脚本
 `script`下面是编译脚本
 `build_ffmpeg-3.4.8.sh` 编译本地c编译环境的ffmpeg的lib库
-`build-emcc.sh` 编译emcc环境需要的ffmpeg的lib库，编译结果lib/ffmpeg-emcc
+`build_ffmpeg-emcc.sh` 编译emcc环境需要的ffmpeg的lib库（精简配置，禁用音频处理和滤镜以减小wasm体积），编译结果lib/ffmpeg-emcc
 `build_wasm.sh` 使用ems编译wasm 和 glue code & worker code
 `build.sh` 同上以及生成dts类型
 
@@ -103,7 +103,7 @@ demo文件夹下`index.html` 使用`live server`启动即可，`live-server --po
 在已经完成准备工作的前提
 
 - 若进行c环境调试 scripts目录下执行`sh build_ffmpeg-3.4.8.sh`编译你的对应环境的lib，`sh reload.sh`执行capture.c 文件。
-- 进行js环境调试，先执行`build-emcc.sh`生产emcc环境需要的ffmpeg的lib库，如若已有库直接执行 `sh build-wasm.sh`，包含`npm run webpack-capture`以及`emcc`编译命令，前者生成`index.js`以及`capture.worker.js`，后者生成`capture.worker.js`(包含emcc的胶水代码) 和`capture.worker.wasm`。
+- 进行js环境调试，如果想要自定义编译ffmpeg的lib先执行`build_ffmpeg-emcc.sh`生产emcc环境需要的ffmpeg的lib库，如不需要自定义编译使用本仓库已编译好的lib，请直接执行 `sh build-wasm.sh`，包含`npm run webpack-capture`以及`emcc`编译命令，前者生成`index.js`以及`capture.worker.js`，后者生成`capture.worker.js`(包含emcc的胶水代码) 和`capture.worker.wasm`。
 - html环境引入，直接引入`index.js`即可，umd变量`cheetahCapture`。
 
 ## 关于版本控制
